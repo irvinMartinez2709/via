@@ -1,0 +1,158 @@
+name: Build Via APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Set APP_VERSION from package.json
+        working-directory: web
+        run: echo "APP_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Build web assets
+        working-directory: web
+        run: npm run build
+
+      - name: Install Capacitor CLI
+        working-directory: web
+        run: npm install --no-save @capacitor/cli
+
+      - name: Add Android platform
+        working-directory: web
+        run: npx cap add android
+
+      - name: Set Android versionName/versionCode (update, no borra datos)
+        working-directory: web/android
+        run: |
+          VER="${APP_VERSION}"
+          MAJOR=$(echo "$VER" | cut -d. -f1)
+          MINOR=$(echo "$VER" | cut -d. -f2)
+          PATCH=$(echo "$VER" | cut -d. -f3)
+          CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          sed -i "s/versionCode 1/versionCode $CODE/" app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"$VER\"/" app/build.gradle
+
+      - name: Restaurar o generar clave de firma
+        working-directory: web
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          mkdir -p keystore
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > keystore/via.p12
+            echo "Keystore restaurado desde el secret"
+          else
+            keytool -genkeypair -v -keystore keystore/via.p12 -storetype pkcs12 \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEYSTORE_PASSWORD" \
+              -alias "$ANDROID_KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Via, OU=Personal, O=Irvin, C=PA"
+            echo "Keystore generado (primera ejecución)"
+            echo "BACKUP_BASE64=$(base64 -w0 keystore/via.p12)" >> $GITHUB_ENV
+          fi
+
+      - name: Guardar keystore generado como secret (primera ejecución)
+        if: env.BACKUP_BASE64 != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "$BACKUP_BASE64" | gh secret set ANDROID_KEYSTORE_BASE64 --repo "${{ github.repository }}"
+
+      - name: Configurar firma en build.gradle
+        working-directory: web
+        run: node scripts/parchear-firma.mjs
+
+      - name: Sync Android
+        working-directory: web
+        run: npx cap sync android
+
+      - name: Write app icons directly (no @capacitor/assets)
+        working-directory: web
+        run: |
+          npm install --no-save sharp
+          node scripts/generar-iconos.mjs
+
+      - name: Build release APK (firmado con clave persistente)
+        working-directory: web/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: ./gradlew assembleRelease
+
+      - name: Renombrar APK con nombre y versión
+        working-directory: web/android
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/Via-${APP_VERSION}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: via-apk
+          path: |
+            web/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Eliminar release anterior de esta versión (reemplazo limpio)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const { data: rel } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: process.env.APP_VERSION
+              });
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: rel.id
+              });
+              console.log(`Release ${process.env.APP_VERSION} eliminado para reemplazarlo`);
+            } catch (e) {
+              console.log(`No había release previo para ${process.env.APP_VERSION}: ${e.status || e.message}`);
+            }
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Via ${{ env.APP_VERSION }}"
+          tag_name: "${{ env.APP_VERSION }}"
+          body_path: web/RELEASE.md
+          files: web/android/app/build/outputs/apk/release/Via-${{ env.APP_VERSION }}.apk
+          update_release: true

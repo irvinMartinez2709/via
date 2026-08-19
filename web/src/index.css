@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --c-fondo: 244 246 251;
+    --c-card: 255 255 255;
+    --c-soft: 235 240 250;
+    --c-tinta: 24 32 48;
+    --c-subtinta: 90 104 128;
+    --c-acc: 37 99 235;
+    --c-acc-fuerte: 29 78 196;
+    --c-acc-suave: 219 234 254;
+    --c-borde: 210 220 235;
+    --c-onacc: 255 255 255;
+  }
+
+  .dark {
+    --c-fondo: 14 18 32;
+    --c-card: 24 30 50;
+    --c-soft: 33 42 66;
+    --c-tinta: 240 244 255;
+    --c-subtinta: 160 172 198;
+    --c-acc: 96 165 250;
+    --c-acc-fuerte: 59 130 246;
+    --c-acc-suave: 37 48 80;
+    --c-borde: 47 58 88;
+    --c-onacc: 10 14 26;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  @supports (height: 100dvh) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+    }
+  }
+
+  body {
+    @apply bg-fondo font-sans text-tinta antialiased;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background-color: rgba(96, 165, 250, 0.35);
+  }
+}
+
+@layer components {
+  .smooth-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+android/
+keystore/
+*.p12
+*.apk
+.DS_Store
