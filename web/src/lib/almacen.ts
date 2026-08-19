@@ -1,4 +1,5 @@
 import type { Bus, Config, Datos, Parada, SeleccionDia, Tema } from "../types";
+import { TODOS_LOS_DIAS } from "../types";
 
 const CLAVE_DATOS = "via.datos.v1";
 const CLAVE_DIA = "via.dia.v1";
@@ -19,6 +20,10 @@ function migrarBus(b: Bus): Bus {
     salidasIda: b.salidasIda || [],
     salidasVuelta: b.salidasVuelta || [],
     favorito: !!b.favorito,
+    dias:
+      Array.isArray(b.dias) && b.dias.length > 0
+        ? b.dias.filter((d) => d >= 0 && d <= 6)
+        : [...TODOS_LOS_DIAS],
   };
 }
 

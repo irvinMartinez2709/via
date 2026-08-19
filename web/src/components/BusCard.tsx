@@ -1,4 +1,5 @@
 import type { Bus } from "../types";
+import { DIAS_SEMANA, TODOS_LOS_DIAS } from "../types";
 import { horaTexto } from "../lib/busquedas";
 import { paradasDeBus } from "../lib/notificaciones";
 import ConfirmarDialog from "./ConfirmarDialog";
@@ -19,6 +20,11 @@ export default function BusCard({
   const [expandido, setExpandido] = useState(false);
   const paradas = paradasDeBus(bus);
   const tarifas = [...bus.tarifas];
+  const dias = Array.isArray(bus.dias) && bus.dias.length > 0 ? bus.dias : TODOS_LOS_DIAS;
+  const circulaTodos = dias.length === TODOS_LOS_DIAS.length;
+  const diasTexto = DIAS_SEMANA.filter((d) => dias.includes(d.n))
+    .map((d) => d.corto)
+    .join(" · ");
 
   return (
     <div className="animate-fade-in rounded-3xl border-2 border-borde bg-card p-4">
@@ -38,6 +44,11 @@ export default function BusCard({
             {paradas.length} paradas · {bus.salidasIda.length} salidas{" "}
             <span className="text-acc">→</span> · {bus.salidasVuelta.length} salidas{" "}
             <span className="text-acc">←</span>
+            {!circulaTodos && (
+              <span className="mt-0.5 block text-[10px] text-amber-600">
+                Circula: {diasTexto}
+              </span>
+            )}
           </p>
         </button>
         <div className="flex flex-col gap-1">

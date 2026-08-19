@@ -21,6 +21,7 @@ export interface Bus {
   salidasVuelta: string[];
   tarifas: Tarifa[];
   favorito: boolean;
+  dias: number[];
 }
 
 export interface SeleccionDia {
@@ -51,6 +52,18 @@ export const uuid = (): string =>
     ? crypto.randomUUID()
     : "id-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
 
+export const DIAS_SEMANA: { n: number; corto: string; nombre: string }[] = [
+  { n: 1, corto: "L", nombre: "Lunes" },
+  { n: 2, corto: "M", nombre: "Martes" },
+  { n: 3, corto: "X", nombre: "Miércoles" },
+  { n: 4, corto: "J", nombre: "Jueves" },
+  { n: 5, corto: "V", nombre: "Viernes" },
+  { n: 6, corto: "S", nombre: "Sábado" },
+  { n: 0, corto: "D", nombre: "Domingo" },
+];
+
+export const TODOS_LOS_DIAS = DIAS_SEMANA.map((d) => d.n);
+
 export const crearBus = (): Bus => ({
   id: uuid(),
   nombre: "",
@@ -60,6 +73,7 @@ export const crearBus = (): Bus => ({
   salidasVuelta: [],
   tarifas: [],
   favorito: false,
+  dias: [...TODOS_LOS_DIAS],
 });
 
 export const COLOR_PRESETS: {

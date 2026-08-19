@@ -202,17 +202,24 @@ export function Stepper({
 }) {
   const refTemporizador = useRef<number | null>(null);
   const refIntervalo = useRef<number | null>(null);
+  const refValor = useRef(valor);
+
+  useEffect(() => {
+    refValor.current = valor;
+  }, [valor]);
 
   function aplicar(delta: number) {
-    const n = Math.min(max, Math.max(min, Math.round((valor + delta) / paso) * paso));
+    const base = refValor.current;
+    const n = Math.min(max, Math.max(min, Math.round((base + delta) / paso) * paso));
+    refValor.current = n;
     alCambiar(n);
   }
 
   function iniciar(delta: number) {
     aplicar(delta);
     refTemporizador.current = window.setTimeout(() => {
-      refIntervalo.current = window.setInterval(() => aplicar(delta), 110);
-    }, 400);
+      refIntervalo.current = window.setInterval(() => aplicar(delta), 100);
+    }, 350);
   }
 
   function detener() {

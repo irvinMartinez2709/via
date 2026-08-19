@@ -49,3 +49,7 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 - v1.2.0: workflow run #8 success; release 1.2.0; APK descargado a apk/.
 - Instalado por adb (--no-streaming): Success; versionName 1.2.0, versionCode 10200; sin FATAL (PID 28321). Datos conservados.
 
+
+## Sesion 8 - 2026-08-19
+- Bugs: 1) paradas saltaban de lugar al cambiar minutos (se ordenaban en vivo) -> se muestran en orden de insercion, se ordenan al guardar; 2) pulsacion mantenida no acumulaba (cierre de valor) -> Stepper con refValor que acumula, intervalo 100ms; 3) recorrido completo usaba 1a/ultima parada por minutos -> ahora usa el nombre del bus (ej. Potrerillos - David); 4) nuevos dias que circula: Bus.dias (0-6, default todos), selector L M X J V S D en el formulario, BusesHoy filtra por dia de hoy, BusCard muestra dias si no circula todos.
+- Playwright 3/3 PASS (verificado: mantener + = 10min, sin saltos, recorrido segun nombre, indicador dias). lint+build OK. version 1.3.0.

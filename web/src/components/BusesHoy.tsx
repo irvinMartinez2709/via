@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Bus, SeleccionDia } from "../types";
-import { uuid } from "../types";
+import { uuid, DIAS_SEMANA, TODOS_LOS_DIAS } from "../types";
 import { horaTexto, horaAMinutos } from "../lib/busquedas";
 import {
   paradasDeBus,
@@ -39,6 +39,18 @@ export default function BusesHoy({
   const [hora, setHora] = useState("");
   const [recordatorio, setRecordatorio] = useState(config.recordatorioMin);
   const [aviso, setAviso] = useState("");
+
+  const hoyDia = new Date().getDay();
+  const diaNombre = DIAS_SEMANA.find((d) => d.n === hoyDia)?.nombre || "";
+  const busesHoy = useMemo(
+    () =>
+      buses.filter((b) =>
+        (Array.isArray(b.dias) && b.dias.length > 0 ? b.dias : TODOS_LOS_DIAS).includes(
+          hoyDia
+        )
+      ),
+    [buses, hoyDia]
+  );
 
   const busSeleccionado = buses.find((b) => b.id === selBusId);
   const paradas = useMemo(
@@ -111,7 +123,10 @@ export default function BusesHoy({
   return (
     <div className="animate-fade-in flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-tinta">Buses de hoy</h2>
+        <div>
+          <h2 className="text-xl font-bold text-tinta">Buses de hoy</h2>
+          <p className="text-xs text-subtinta">Hoy es {diaNombre}</p>
+        </div>
         <div className="rounded-2xl bg-acc px-4 py-2 text-right text-onacc">
           <p className="text-[10px] font-semibold uppercase opacity-80">Total del día</p>
           <p className="text-lg font-extrabold leading-tight">
@@ -191,9 +206,15 @@ export default function BusesHoy({
               setBajadaId("");
               setHora("");
             }}
-            opciones={buses.map((b) => ({ id: b.id, texto: b.nombre }))}
+            opciones={busesHoy.map((b) => ({ id: b.id, texto: b.nombre }))}
             placeholder="Selecciona un bus…"
           />
+          {busesHoy.length === 0 && (
+            <p className="rounded-xl bg-amber-500/15 px-3 py-2 text-xs text-amber-600">
+              Ninguno de tus buses circula hoy ({diaNombre}). Puedes marcar los días de
+              cada bus al editarlo.
+            </p>
+          )}
 
           {busSeleccionado && (
             <>

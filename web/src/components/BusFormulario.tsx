@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Bus, Parada, Tarifa } from "../types";
-import { uuid, crearBus } from "../types";
-import { ordenarHoras, precioParse } from "../lib/busquedas";
+import { uuid, crearBus, DIAS_SEMANA } from "../types";
+import { ordenarHoras, precioParse, normalizar } from "../lib/busquedas";
 import { Input, Tarjeta, Stepper, Combo, Selector, TarifaInput } from "./ui";
 import ConfirmarDialog from "./ConfirmarDialog";
 
@@ -42,21 +42,34 @@ export default function BusFormulario({
     [nombrePartes]
   );
 
-  const paradasOrdenadas = useMemo(
-    () => [...bus.paradas].sort((a, b) => a.minutos - b.minutos),
-    [bus.paradas]
-  );
+  /* Las paradas se muestran en el orden que las añades (sin saltos al cambiar tiempo);
+     al guardar se ordenan por minutos. */
+  const paradasOrdenadas = bus.paradas;
 
-  const primera = paradasOrdenadas[0];
-  const ultima = paradasOrdenadas[paradasOrdenadas.length - 1];
+  /* Recorrido completo según el nombre del bus (ej. "Potrerillos - David") */
+  const paradaInicio = useMemo(() => {
+    const parte = nombrePartes[0];
+    const p = bus.paradas.find(
+      (x) => parte && normalizar(x.nombre) === normalizar(parte)
+    );
+    return p || bus.paradas[0];
+  }, [bus.paradas, nombrePartes]);
+
+  const paradaFin = useMemo(() => {
+    const parte = nombrePartes[1];
+    const p = bus.paradas.find(
+      (x) => parte && normalizar(x.nombre) === normalizar(parte)
+    );
+    return p || bus.paradas[bus.paradas.length - 1];
+  }, [bus.paradas, nombrePartes]);
 
   /* La tarifa del recorrido completo se edita en su propio campo; no se duplica en la lista */
   const tramos = useMemo(() => {
-    if (!primera || !ultima) return bus.tarifas;
+    if (!paradaInicio || !paradaFin) return bus.tarifas;
     return bus.tarifas.filter(
-      (t) => !(t.desdeId === primera.id && t.hastaId === ultima.id)
+      (t) => !(t.desdeId === paradaInicio.id && t.hastaId === paradaFin.id)
     );
-  }, [bus.tarifas, primera, ultima]);
+  }, [bus.tarifas, paradaInicio, paradaFin]);
 
   function setNombre(v: string) {
     const nuevo = { ...bus, nombre: v };
@@ -153,10 +166,18 @@ export default function BusFormulario({
     });
   }
 
+  function toggleDia(n: number) {
+    const dias = bus.dias.includes(n)
+      ? bus.dias.filter((d) => d !== n)
+      : [...bus.dias, n].sort((a, b) => a - b);
+    setBus({ ...bus, dias });
+  }
+
   function guardar() {
     if (!nombreValido) return;
     const salidasIda = ordenarHoras(horasIda.split(",").map((s) => s.trim()));
     const salidasVuelta = ordenarHoras(horasVuelta.split(",").map((s) => s.trim()));
+    const paradas = [...bus.paradas].sort((a, b) => a.minutos - b.minutos);
     const tarifas = bus.tarifas
       .filter(
         (t) => t.desdeId && t.hastaId && t.desdeId !== t.hastaId
@@ -173,7 +194,7 @@ export default function BusFormulario({
       ...bus,
       nombre: nombrePartes.join(" - "),
       lugarPrincipal: nombrePartes[0],
-      paradas: paradasOrdenadas,
+      paradas,
       salidasIda,
       salidasVuelta,
       tarifas,
@@ -316,6 +337,39 @@ export default function BusFormulario({
         </div>
       </Tarjeta>
 
+      <Tarjeta>
+        <h3 className="mb-1 font-bold text-tinta">Días que circula</h3>
+        <p className="mb-3 text-xs text-subtinta">
+          Si el bus no pasa todos los días, toca los días en que circula. Se usan en "Buses
+          de hoy".
+        </p>
+        <div className="flex gap-2">
+          {DIAS_SEMANA.map((d) => {
+            const activo = bus.dias.includes(d.n);
+            return (
+              <button
+                key={d.n}
+                type="button"
+                onClick={() => toggleDia(d.n)}
+                title={d.nombre}
+                className={`flex-1 rounded-xl border-2 py-2.5 text-center text-sm font-bold ${
+                  activo
+                    ? "border-acc bg-acc text-onacc"
+                    : "border-borde bg-card text-subtinta"
+                }`}
+              >
+                {d.corto}
+              </button>
+            );
+          })}
+        </div>
+        {bus.dias.length === 0 && (
+          <p className="mt-2 rounded-xl bg-amber-500/15 px-3 py-2 text-xs text-amber-600">
+            Elige al menos un día, si no el bus no se mostrará en "Buses de hoy".
+          </p>
+        )}
+      </Tarjeta>
+
       {paradasOrdenadas.length >= 2 && (
         <Tarjeta>
           <h3 className="mb-1 font-bold text-tinta">Tarifas</h3>
@@ -324,15 +378,15 @@ export default function BusFormulario({
             no pasa nada. Empieza por el precio del recorrido completo.
           </p>
 
-          {primera && ultima && (
+          {paradaInicio && paradaFin && paradaInicio.id !== paradaFin.id && (
             <div className="mb-4 rounded-2xl border-2 border-acc bg-acc-suave p-3">
               <span className="mb-1 block text-xs font-semibold text-acc">
-                Recorrido completo (opcional): {primera.nombre} → {ultima.nombre}
+                Recorrido completo (opcional): {paradaInicio.nombre} → {paradaFin.nombre}
               </span>
               <TarifaInput
-                valor={tarifaPar(primera.id, ultima.id)?.precio ?? null}
+                valor={tarifaPar(paradaInicio.id, paradaFin.id)?.precio ?? null}
                 alCambiar={(_precio, texto) =>
-                  ponerTarifa(primera.id, ultima.id, texto)
+                  ponerTarifa(paradaInicio.id, paradaFin.id, texto)
                 }
                 placeholder="Precio del recorrido completo…"
               />

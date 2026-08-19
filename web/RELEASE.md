@@ -1,3 +1,18 @@
+# Via 1.3.0
+
+## Añadido
+- **Días que circula**: cada bus puede marcar en qué días de la semana pasa (L M X J V S D). En "Buses de hoy" solo se muestran los buses que circulan hoy.
+
+## Correcciones
+- **Pulsación mantenida en los tiempos**: mantener presionado − / + ahora avanza de a 1 minuto sin soltar (antes solo sumaba 1).
+- **Las paradas ya no saltan de lugar** al cambiar los minutos: se muestran en el orden en que las agregaste y al guardar se ordenan por tiempo.
+- **Recorrido completo correcto**: la tarifa principal ahora usa el nombre del bus (ej. "Potrerillos - David" → Potrerillos → David) en lugar de la primera/última parada por tiempo.
+
+## Instalación
+Descarga el APK y ábrelo en tu dispositivo Android. Los datos se guardan solo en tu teléfono.
+
+---
+
 # Via 1.2.0
 
 ## Añadido
