@@ -8,11 +8,13 @@ import GestionarBuses from "./components/GestionarBuses";
 import BusesHoy from "./components/BusesHoy";
 import Lugares from "./components/Lugares";
 import Configuracion from "./components/Configuracion";
+import Mapa from "./components/Mapa";
 import { Emoji } from "./components/ui";
 import { cancelarRecordatorios } from "./lib/notificaciones";
 import { lugaresDeBuses } from "./lib/busquedas";
+import { aplicarPaleta } from "./lib/colores";
 
-type Seccion = "inicio" | "buses" | "hoy" | "lugares" | "config";
+type Seccion = "inicio" | "buses" | "hoy" | "lugares" | "mapa" | "config";
 
 export default function App() {
   const [cargando, setCargando] = useState(true);
@@ -26,6 +28,7 @@ export default function App() {
     html.classList.toggle("light", d.tema === "light");
     html.setAttribute("data-color", d.config.color);
     html.setAttribute("data-emojis", d.config.emojis);
+    aplicarPaleta(d.config.color, d.tema);
   }, [d.tema, d.config]);
 
   useEffect(() => {
@@ -58,6 +61,7 @@ export default function App() {
     { id: "buses" as Seccion, label: "Buses", icono: "🚌" },
     { id: "hoy" as Seccion, label: "Hoy", icono: "📅" },
     { id: "lugares" as Seccion, label: "Lugares", icono: "📍" },
+    { id: "mapa" as Seccion, label: "Mapa", icono: "🗺️" },
     { id: "config" as Seccion, label: "Más", icono: "⚙️" },
   ];
 
@@ -92,6 +96,7 @@ export default function App() {
           />
         )}
         {seccion === "lugares" && <Lugares buses={d.datos.buses} />}
+        {seccion === "mapa" && <Mapa />}
         {seccion === "config" && (
           <Configuracion
             config={d.config}
@@ -99,6 +104,7 @@ export default function App() {
             onConfig={d.actualizarConfig}
             onTema={d.cambiarTema}
             onLimpiar={d.limpiarTodo}
+            onAbrirMapa={() => setSeccion("mapa")}
           />
         )}
       </main>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { esNumeroPrecio, precioParse } from "../lib/busquedas";
 
 export function Input({
   label,
@@ -311,5 +312,41 @@ export function Combo({
         </div>
       )}
     </div>
+  );
+}
+
+/* Entrada de precio con escritura libre (permite el punto decimal sin cortarse) */
+export function TarifaInput({
+  valor,
+  alCambiar,
+  placeholder,
+}: {
+  valor: number | null;
+  alCambiar: (precio: number | null, texto: string) => void;
+  placeholder?: string;
+}) {
+  const [texto, setTexto] = useState(valor === null ? "" : valor.toFixed(2));
+  const [editando, setEditando] = useState(false);
+
+  useEffect(() => {
+    if (!editando) setTexto(valor === null ? "" : valor.toFixed(2));
+  }, [valor, editando]);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={texto}
+      placeholder={placeholder}
+      onChange={(e) => {
+        const t = e.target.value;
+        setTexto(t);
+        if (t.trim() === "") alCambiar(null, t);
+        else if (esNumeroPrecio(t)) alCambiar(precioParse(t), t);
+      }}
+      onFocus={() => setEditando(true)}
+      onBlur={() => setEditando(false)}
+      className="w-full rounded-2xl border-2 border-borde bg-soft px-4 py-2.5 text-center text-tinta outline-none placeholder:text-subtinta/60 focus:border-acc"
+    />
   );
 }

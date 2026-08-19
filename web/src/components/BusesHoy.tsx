@@ -255,7 +255,7 @@ export default function BusesHoy({
                       alCambiar={setRecordatorio}
                       min={0}
                       max={600}
-                      paso={5}
+                      paso={1}
                       sufijo="min"
                     />
                   </div>

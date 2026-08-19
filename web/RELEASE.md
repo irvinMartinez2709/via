@@ -1,17 +1,17 @@
-# Via 1.1.0
+# Via 1.2.0
 
 ## Añadido
-- **Personalización**: 10 colores de la app (presets) y 3 modos de iconos (de color, blanco y negro, sin emojis).
-- **Controles interactivos**: botones − / + (con pulsación mantenida) para tiempos en vez de escribir.
-- **Desfase por parada**: un bus puede pasar antes (−) o después (+) de lo que marca el horario en cada lugar.
-- **Reutilizar lugares**: al añadir paradas se sugieren lugares de otros buses; varios buses pueden pasar por el mismo sitio.
-- **Lugares con lista**: en "Lugares" puedes escribir o elegir de una lista de todos los lugares guardados.
-- **UI propia**: los selectores usan listas de la app (sin el menú nativo de Android).
-- **Más resumen en Inicio**: conteo de lugares, paradas y aviso de buses sin tarifas; guía de primeros pasos cuando no hay datos.
-- Logo actualizado.
+- **Mapa de Chiriquí sin internet**: nueva sección "Mapa" con mapa de OpenStreetMap (con internet). En "Más" puedes añadir un archivo `.mbtiles` del mapa de Chiriquí para verlo sin conexión (se guarda en el teléfono).
+- **Color personalizado**: además de los 10 colores prediseñados, puedes elegir cualquier color con un selector.
+- **Los colores cambian toda la app**: los presets ahora tiñen fondos, tarjetas y botones (no solo los detalles).
+- **Tarifa del recorrido completo**: al crear un bus (ej. "Potrerillos - David") puedes poner directamente el precio de subir en el primer lugar y bajar en el último.
+- **Tarifas reestructuradas**: lista clara de precios por tramo (Desde → Hasta) en lugar de la tabla; cada precio se escribe con libertad (admite punto decimal sin cortarse).
+- **Paso de 1 minuto**: los controles − / + de minutos y recordatorios ahora suben de 1 en 1.
+- Más preguntas frecuentes en "Más" con explicaciones simples.
 
 ## Cambios
-- Aviso de "pulsa atrás para salir" ahora aparece abajo.
+- **Tiempo de parada más claro**: la parada pide solo "minutos en llegar desde la salida"; el ajuste "pasa antes o después de lo marcado" quedó como opción avanzada plegable.
+- Preguntas frecuentes reorganizadas.
 
 ## Instalación
 Descarga el APK y ábrelo en tu dispositivo Android. Los datos se guardan solo en tu teléfono.

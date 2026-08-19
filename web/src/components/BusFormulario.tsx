@@ -1,12 +1,8 @@
 import { useMemo, useState } from "react";
 import type { Bus, Parada, Tarifa } from "../types";
 import { uuid, crearBus } from "../types";
-import {
-  ordenarHoras,
-  precioParse,
-  esNumeroPrecio,
-} from "../lib/busquedas";
-import { Input, Tarjeta, Stepper, Combo } from "./ui";
+import { ordenarHoras, precioParse } from "../lib/busquedas";
+import { Input, Tarjeta, Stepper, Combo, Selector, TarifaInput } from "./ui";
 import ConfirmarDialog from "./ConfirmarDialog";
 
 export default function BusFormulario({
@@ -51,6 +47,17 @@ export default function BusFormulario({
     [bus.paradas]
   );
 
+  const primera = paradasOrdenadas[0];
+  const ultima = paradasOrdenadas[paradasOrdenadas.length - 1];
+
+  /* La tarifa del recorrido completo se edita en su propio campo; no se duplica en la lista */
+  const tramos = useMemo(() => {
+    if (!primera || !ultima) return bus.tarifas;
+    return bus.tarifas.filter(
+      (t) => !(t.desdeId === primera.id && t.hastaId === ultima.id)
+    );
+  }, [bus.tarifas, primera, ultima]);
+
   function setNombre(v: string) {
     const nuevo = { ...bus, nombre: v };
     const partes = v.split("-").map((p) => p.trim()).filter(Boolean);
@@ -64,7 +71,9 @@ export default function BusFormulario({
     const p: Parada = {
       id: uuid(),
       nombre,
-      minutos: bus.paradas.length ? Math.max(...bus.paradas.map((x) => x.minutos)) + 5 : 0,
+      minutos: bus.paradas.length
+        ? Math.max(...bus.paradas.map((x) => x.minutos)) + 1
+        : 0,
       desfase: 0,
     };
     setBus({ ...bus, paradas: [...bus.paradas, p] });
@@ -100,44 +109,66 @@ export default function BusFormulario({
     });
   }
 
-  function setTarifa(desdeId: string, hastaId: string, valor: string) {
-    if (desdeId === hastaId) return;
-    if (valor.trim() === "") {
-      setBus({
-        ...bus,
-        tarifas: bus.tarifas.filter(
-          (t) => !(t.desdeId === desdeId && t.hastaId === hastaId)
-        ),
-      });
-      return;
-    }
-    if (!esNumeroPrecio(valor)) return;
-    const precio = precioParse(valor);
-    const existe = bus.tarifas.find(
+  function tarifaPar(desdeId: string, hastaId: string): Tarifa | undefined {
+    return bus.tarifas.find(
       (t) => t.desdeId === desdeId && t.hastaId === hastaId
     );
+  }
+
+  function ponerTarifa(desdeId: string, hastaId: string, texto: string) {
+    if (!desdeId || !hastaId || desdeId === hastaId) return;
+    const existe = tarifaPar(desdeId, hastaId);
     let tarifas: Tarifa[];
-    if (existe) {
+    if (texto.trim() === "") {
+      tarifas = bus.tarifas.filter(
+        (t) => !(t.desdeId === desdeId && t.hastaId === hastaId)
+      );
+    } else if (existe) {
       tarifas = bus.tarifas.map((t) =>
-        t.desdeId === desdeId && t.hastaId === hastaId ? { ...t, precio } : t
+        t.desdeId === desdeId && t.hastaId === hastaId
+          ? { ...t, precio: precioParse(texto) }
+          : t
       );
     } else {
-      tarifas = [...bus.tarifas, { id: uuid(), desdeId, hastaId, precio }];
+      tarifas = [...bus.tarifas, { id: uuid(), desdeId, hastaId, precio: precioParse(texto) }];
     }
     setBus({ ...bus, tarifas });
   }
 
-  function tarifaDe(desdeId: string, hastaId: string): string {
-    const t = bus.tarifas.find(
-      (x) => x.desdeId === desdeId && x.hastaId === hastaId
-    );
-    return t ? t.precio.toFixed(2) : "";
+  function añadirTramo() {
+    setBus({
+      ...bus,
+      tarifas: [...bus.tarifas, { id: uuid(), desdeId: "", hastaId: "", precio: 0 }],
+    });
+  }
+
+  function eliminarTarifa(id: string) {
+    setBus({ ...bus, tarifas: bus.tarifas.filter((t) => t.id !== id) });
+  }
+
+  function editarTramo(id: string, cambio: Partial<Tarifa>) {
+    setBus({
+      ...bus,
+      tarifas: bus.tarifas.map((t) => (t.id === id ? { ...t, ...cambio } : t)),
+    });
   }
 
   function guardar() {
     if (!nombreValido) return;
     const salidasIda = ordenarHoras(horasIda.split(",").map((s) => s.trim()));
     const salidasVuelta = ordenarHoras(horasVuelta.split(",").map((s) => s.trim()));
+    const tarifas = bus.tarifas
+      .filter(
+        (t) => t.desdeId && t.hastaId && t.desdeId !== t.hastaId
+      )
+      .reduce<Tarifa[]>((acc, t) => {
+        const i = acc.findIndex(
+          (x) => x.desdeId === t.desdeId && x.hastaId === t.hastaId
+        );
+        if (i >= 0) acc[i] = t;
+        else acc.push(t);
+        return acc;
+      }, []);
     onGuardar({
       ...bus,
       nombre: nombrePartes.join(" - "),
@@ -145,6 +176,7 @@ export default function BusFormulario({
       paradas: paradasOrdenadas,
       salidasIda,
       salidasVuelta,
+      tarifas,
     });
   }
 
@@ -182,9 +214,8 @@ export default function BusFormulario({
       <Tarjeta>
         <h3 className="mb-1 font-bold text-tinta">Paradas de la ruta</h3>
         <p className="mb-3 text-xs text-subtinta">
-          Añade los lugares por donde pasa el bus en orden. Con los botones − / + ajusta
-          los <b>minutos desde la salida</b> y si el bus pasa <b>antes</b> (desfase −) o{" "}
-          <b>después</b> (desfase +) de lo que marca el horario.
+          Añade los lugares por donde pasa el bus. Con los botones − / + indica{" "}
+          <b>cuántos minutos tarda en llegar</b> desde que sale.
         </p>
 
         {paradasOrdenadas.map((p, i) => (
@@ -207,34 +238,37 @@ export default function BusFormulario({
                 ✕
               </button>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div>
+            <div className="mt-3">
+              <span className="mb-1 block text-xs font-semibold text-subtinta">
+                Minutos en llegar desde la salida
+              </span>
+              <Stepper
+                valor={p.minutos}
+                alCambiar={(v) => editarParadaMinutos(p.id, v)}
+                min={0}
+                max={600}
+                paso={1}
+                sufijo="min"
+              />
+            </div>
+            <details className="mt-3 text-xs">
+              <summary className="cursor-pointer font-semibold text-subtinta">
+                ¿El bus pasa antes o después de lo que marca? (opcional)
+              </summary>
+              <div className="mt-2">
                 <span className="mb-1 block text-xs font-semibold text-subtinta">
-                  Minutos desde la salida
-                </span>
-                <Stepper
-                  valor={p.minutos}
-                  alCambiar={(v) => editarParadaMinutos(p.id, v)}
-                  min={0}
-                  max={600}
-                  paso={5}
-                  sufijo="min"
-                />
-              </div>
-              <div>
-                <span className="mb-1 block text-xs font-semibold text-subtinta">
-                  Pasa antes (−) o después (+)
+                  Pasa antes (−) o después (+) de lo marcado
                 </span>
                 <Stepper
                   valor={p.desfase ?? 0}
                   alCambiar={(v) => editarParadaDesfase(p.id, v)}
                   min={-120}
                   max={120}
-                  paso={5}
+                  paso={1}
                   sufijo="min"
                 />
               </div>
-            </div>
+            </details>
           </div>
         ))}
 
@@ -286,55 +320,85 @@ export default function BusFormulario({
         <Tarjeta>
           <h3 className="mb-1 font-bold text-tinta">Tarifas</h3>
           <p className="mb-3 text-xs text-subtinta">
-            Escribe el precio de subir en un lugar y bajar en otro. Los buses cobran por
-            tramo: deja vacío si no hay precio para ese tramo.
+            El precio es de subir en un lugar y bajar en otro. Deja vacío si no lo sabes;
+            no pasa nada. Empieza por el precio del recorrido completo.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="p-1" />
-                  {paradasOrdenadas.map((p) => (
-                    <th
-                      key={p.id}
-                      className="max-w-[90px] truncate p-1 text-xs font-semibold text-subtinta"
+
+          {primera && ultima && (
+            <div className="mb-4 rounded-2xl border-2 border-acc bg-acc-suave p-3">
+              <span className="mb-1 block text-xs font-semibold text-acc">
+                Recorrido completo (opcional): {primera.nombre} → {ultima.nombre}
+              </span>
+              <TarifaInput
+                valor={tarifaPar(primera.id, ultima.id)?.precio ?? null}
+                alCambiar={(_precio, texto) =>
+                  ponerTarifa(primera.id, ultima.id, texto)
+                }
+                placeholder="Precio del recorrido completo…"
+              />
+            </div>
+          )}
+
+          {tramos.length > 0 && (
+            <div className="mb-3 flex flex-col gap-3">
+              {tramos.map((t) => (
+                <div
+                  key={t.id}
+                  className="rounded-2xl border-2 border-borde bg-soft p-3"
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <Selector
+                      label="Desde"
+                      valor={t.desdeId}
+                      alElegir={(id) => editarTramo(t.id, { desdeId: id })}
+                      opciones={paradasOrdenadas.map((p) => ({
+                        id: p.id,
+                        texto: p.nombre,
+                      }))}
+                      placeholder="Lugar de subida…"
+                    />
+                    <Selector
+                      label="Hasta"
+                      valor={t.hastaId}
+                      alElegir={(id) => editarTramo(t.id, { hastaId: id })}
+                      opciones={paradasOrdenadas.map((p) => ({
+                        id: p.id,
+                        texto: p.nombre,
+                      }))}
+                      placeholder="Lugar de bajada…"
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1">
+                      <TarifaInput
+                        valor={t.precio === 0 && (!t.desdeId || !t.hastaId) ? null : t.precio}
+                        alCambiar={(_precio, texto) =>
+                          ponerTarifa(t.desdeId, t.hastaId, texto)
+                        }
+                        placeholder="Precio…"
+                      />
+                    </div>
+                    <button
+                      onClick={() => eliminarTarifa(t.id)}
+                      className="shrink-0 rounded-xl bg-red-500/10 px-3 py-2.5 font-bold text-red-500"
+                      title="Quitar tramo"
                     >
-                      {p.nombre}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {paradasOrdenadas.map((desde) => (
-                  <tr key={desde.id}>
-                    <td className="max-w-[90px] truncate p-1 text-xs font-semibold text-subtinta">
-                      {desde.nombre}
-                    </td>
-                    {paradasOrdenadas.map((hasta) => (
-                      <td key={hasta.id} className="p-1">
-                        {desde.id === hasta.id ? (
-                          <div className="h-9" />
-                        ) : (
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={tarifaDe(desde.id, hasta.id)}
-                            onChange={(e) =>
-                              setTarifa(desde.id, hasta.id, e.target.value)
-                            }
-                            placeholder="–"
-                            className="h-9 w-16 rounded-lg border-2 border-borde bg-soft px-1 text-center text-tinta outline-none focus:border-acc"
-                          />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={añadirTramo}
+            className="w-full rounded-2xl border-2 border-dashed border-borde bg-card px-4 py-3 text-sm font-semibold text-subtinta active:scale-[0.98]"
+          >
+            + Añadir precio por tramo
+          </button>
           <p className="mt-2 text-xs text-subtinta">
-            Ejemplo: en "Potrerillos - David", si Dolega está en medio, escribe el precio
+            Ejemplo: en "Potrerillos - David", si Dolega está en medio, añade el precio
             Potrerillos→Dolega y Dolega→David por separado (no se suman solos).
           </p>
         </Tarjeta>

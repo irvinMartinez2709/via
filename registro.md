@@ -39,3 +39,8 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 - v1.1.0: workflow run #6 success; release 1.1.0; APK descargado a apk/.
 - Instalado en Redmi con --no-streaming (bug MIUI INSTALL_FAILED_USER_RESTRICTED): Success; versionName 1.1.0, versionCode 10100; sin FATAL (PID 26198).
 
+
+## Sesion 7 - 2026-08-19
+- 8 requisitos del usuario: 1) aclarar tiempos de parada (minutos en llegar) y pasar antes/despues a opcional + FAQ; 2) fix bug escribir tarifas (punto decimal se cortaba): nuevo TarifaInput con estado local; 3) tarifas reestructuradas como lista de tramos (Desde→Hasta) + tarifa de recorrido completo; 4) tarifa opcional de ruta completa al crear bus; 5) UX mas intuitiva; 6) presets tiñen TODA la app (fondo/tarjetas) via aplicarPaleta + color personalizado (input type=color); 7) mapa offline Chiriqui con Leaflet + MBTiles (sql.js + IndexedDB), importar .mbtiles en "Mas"; 8) steppers a paso 1 (paradas y recordatorio).
+- Nuevos archivos: lib/colores.ts, lib/idb.ts, lib/mapa.ts, components/Mapa.tsx; deps: leaflet, sql.js, @types/leaflet, @types/sql.js.
+- Seccion nav nueva "Mapa". Playwright actualizado (tarifas nueva UI) 3/3 PASS. lint+build OK. version 1.2.0.
