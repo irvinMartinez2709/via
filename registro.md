@@ -53,3 +53,7 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 ## Sesion 8 - 2026-08-19
 - Bugs: 1) paradas saltaban de lugar al cambiar minutos (se ordenaban en vivo) -> se muestran en orden de insercion, se ordenan al guardar; 2) pulsacion mantenida no acumulaba (cierre de valor) -> Stepper con refValor que acumula, intervalo 100ms; 3) recorrido completo usaba 1a/ultima parada por minutos -> ahora usa el nombre del bus (ej. Potrerillos - David); 4) nuevos dias que circula: Bus.dias (0-6, default todos), selector L M X J V S D en el formulario, BusesHoy filtra por dia de hoy, BusCard muestra dias si no circula todos.
 - Playwright 3/3 PASS (verificado: mantener + = 10min, sin saltos, recorrido segun nombre, indicador dias). lint+build OK. version 1.3.0.
+
+## Sesion 8b - 2026-08-19
+- v1.3.0 instalado y VERIFICADO en Redmi: arranque Status ok, sin FATAL, sin AndroidRuntime, sin errores JS en WebView, sin ANR, PID activo. Los errores chromium del log eran de Google Play Services (Ads/Cronet), no de Via.
+
