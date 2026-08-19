@@ -22,3 +22,10 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 - Verifiqué: `npm run lint` y `npm run build` sin errores; suite Playwright 2/2 PASS (flujo completo: crear bus, tarifas, favorito, buses de hoy con total, lugares, búsqueda difusa "davod", persistencia tras recarga).
 - Creé repo privado `github.com/irvinMartinez2709/via`, commit `d8aac9b`, push a main (dispara workflow).
 - Pendiente: esperar el APK de la Release y preguntar al usuario si quiere instalarlo/verificarlo por adb.
+
+## Sesión 5 - 2026-08-18
+- Workflow #2 quedó en cola (runner colgado); se canceló y se relanzó (run #3): conclusion success.
+- Secrets configurados vía API con cifrado libsodium sealed box (X25519): ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, GH_PAT.
+- Release 1.0.0 creada con asset Via-1.0.0.apk (3.9 MB), descargado a apk/.
+- registro.md commiteado (c9b2701).
+- Instalado por adb en Redmi (2409BRN2CL): Success; versionName 1.0.0, versionCode 10000; arranque sin FATAL (PID confirmado).
