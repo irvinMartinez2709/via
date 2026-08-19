@@ -6,15 +6,17 @@ import {
   precioParse,
   esNumeroPrecio,
 } from "../lib/busquedas";
-import { Input, Tarjeta } from "./ui";
+import { Input, Tarjeta, Stepper, Combo } from "./ui";
 import ConfirmarDialog from "./ConfirmarDialog";
 
 export default function BusFormulario({
   busInicial,
+  lugares,
   onGuardar,
   onCancelar,
 }: {
   busInicial: Bus | null;
+  lugares: string[];
   onGuardar: (b: Bus) => void;
   onCancelar: () => void;
 }) {
@@ -27,7 +29,7 @@ export default function BusFormulario({
         }
       : crearBus()
   );
-  const [nuevaParada, setNuevaParada] = useState({ nombre: "", minutos: "" });
+  const [nuevaParada, setNuevaParada] = useState({ nombre: "" });
   const [horasIda, setHorasIda] = useState(busInicial?.salidasIda.join(", ") ?? "");
   const [horasVuelta, setHorasVuelta] = useState(
     busInicial?.salidasVuelta.join(", ") ?? ""
@@ -56,34 +58,37 @@ export default function BusFormulario({
     setBus(nuevo);
   }
 
-  function agregarParada() {
-    const nombre = nuevaParada.nombre.trim();
+  function agregarParada(nombreSugerido?: string) {
+    const nombre = (nombreSugerido ?? nuevaParada.nombre).trim();
     if (!nombre) return;
-    const minutos = parseInt(nuevaParada.minutos || "0", 10);
     const p: Parada = {
       id: uuid(),
       nombre,
-      minutos: isNaN(minutos) ? 0 : Math.max(0, minutos),
+      minutos: bus.paradas.length ? Math.max(...bus.paradas.map((x) => x.minutos)) + 5 : 0,
+      desfase: 0,
     };
     setBus({ ...bus, paradas: [...bus.paradas, p] });
-    setNuevaParada({ nombre: "", minutos: "" });
+    setNuevaParada({ nombre: "" });
   }
 
-  function editarParada(id: string, campo: "nombre" | "minutos", valor: string) {
+  function editarParadaNombre(id: string, nombre: string) {
     setBus({
       ...bus,
-      paradas: bus.paradas.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              nombre:
-                campo === "nombre"
-                  ? valor
-                  : p.nombre,
-              minutos: campo === "minutos" ? (parseInt(valor, 10) || 0) : p.minutos,
-            }
-          : p
-      ),
+      paradas: bus.paradas.map((p) => (p.id === id ? { ...p, nombre } : p)),
+    });
+  }
+
+  function editarParadaMinutos(id: string, minutos: number) {
+    setBus({
+      ...bus,
+      paradas: bus.paradas.map((p) => (p.id === id ? { ...p, minutos } : p)),
+    });
+  }
+
+  function editarParadaDesfase(id: string, desfase: number) {
+    setBus({
+      ...bus,
+      paradas: bus.paradas.map((p) => (p.id === id ? { ...p, desfase } : p)),
     });
   }
 
@@ -126,7 +131,7 @@ export default function BusFormulario({
     const t = bus.tarifas.find(
       (x) => x.desdeId === desdeId && x.hastaId === hastaId
     );
-    return t ? String(t.precio).replace(".", ".") : "";
+    return t ? t.precio.toFixed(2) : "";
   }
 
   function guardar() {
@@ -153,88 +158,113 @@ export default function BusFormulario({
     <div className="flex flex-col gap-4 pb-32">
       <Tarjeta>
         <Input
-          label="Nombre del bus (Lugar1 - Lugar2)"
+          label="Nombre del bus"
           value={bus.nombre}
           onChange={setNombre}
           placeholder="Ej: Potrerillos - David"
         />
+        <p className="mt-2 text-xs text-subtinta">
+          Escribe los dos lugares separados por <b>-</b>. El lugar de la izquierda es el
+          principal (donde inicia la ruta).
+        </p>
         {nombrePartes.length === 1 && bus.nombre.trim() && (
-          <p className="mt-2 text-xs text-subtinta">
-            Separa los dos lugares con " - ". El lugar principal (izquierda) será el
-            primero.
+          <p className="mt-2 rounded-xl bg-amber-500/15 px-3 py-2 text-xs text-amber-600">
+            Falta el segundo lugar. Ejemplo correcto: <b>Potrerillos - David</b>
           </p>
         )}
-        {bus.lugarPrincipal && (
+        {bus.lugarPrincipal && nombrePartes.length >= 2 && (
           <p className="mt-2 text-xs font-semibold text-acc">
-            Lugar principal: {bus.lugarPrincipal}
+            Inicio de ruta: {bus.lugarPrincipal}
           </p>
         )}
       </Tarjeta>
 
       <Tarjeta>
-        <h3 className="mb-3 font-bold text-tinta">Paradas de la ruta</h3>
+        <h3 className="mb-1 font-bold text-tinta">Paradas de la ruta</h3>
         <p className="mb-3 text-xs text-subtinta">
-          Escribe cuántos minutos tarda el bus en llegar a cada parada desde el lugar
-          principal (salida ida).
+          Añade los lugares por donde pasa el bus en orden. Con los botones − / + ajusta
+          los <b>minutos desde la salida</b> y si el bus pasa <b>antes</b> (desfase −) o{" "}
+          <b>después</b> (desfase +) de lo que marca el horario.
         </p>
+
         {paradasOrdenadas.map((p, i) => (
-          <div key={p.id} className="mb-2 flex items-center gap-2">
-            <span className="w-5 text-center text-sm font-bold text-subtinta">
-              {i + 1}
-            </span>
-            <input
-              value={p.nombre}
-              onChange={(e) => editarParada(p.id, "nombre", e.target.value)}
-              placeholder="Parada"
-              className="min-w-0 flex-1 rounded-xl border-2 border-borde bg-soft px-3 py-2 text-tinta outline-none focus:border-acc"
-            />
-            <input
-              type="tel"
-              value={p.minutos === 0 ? "" : String(p.minutos)}
-              onChange={(e) => editarParada(p.id, "minutos", e.target.value)}
-              placeholder="min"
-              className="w-16 rounded-xl border-2 border-borde bg-soft px-2 py-2 text-center text-tinta outline-none focus:border-acc"
-            />
-            <button
-              onClick={() => eliminarParada(p.id)}
-              className="rounded-xl bg-red-500/10 px-3 py-2 font-bold text-red-500"
-            >
-              ✕
-            </button>
+          <div key={p.id} className="mb-3 rounded-2xl border-2 border-borde bg-soft p-3">
+            <div className="flex items-center gap-2">
+              <span className="w-6 shrink-0 text-center text-sm font-bold text-acc">
+                {i + 1}
+              </span>
+              <Combo
+                valor={p.nombre}
+                alCambiar={(v) => editarParadaNombre(p.id, v)}
+                opciones={lugares.filter((l) => l !== p.nombre)}
+                placeholder="Nombre del lugar"
+              />
+              <button
+                onClick={() => eliminarParada(p.id)}
+                className="shrink-0 rounded-xl bg-red-500/10 px-3 py-2.5 font-bold text-red-500"
+                title="Quitar parada"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <span className="mb-1 block text-xs font-semibold text-subtinta">
+                  Minutos desde la salida
+                </span>
+                <Stepper
+                  valor={p.minutos}
+                  alCambiar={(v) => editarParadaMinutos(p.id, v)}
+                  min={0}
+                  max={600}
+                  paso={5}
+                  sufijo="min"
+                />
+              </div>
+              <div>
+                <span className="mb-1 block text-xs font-semibold text-subtinta">
+                  Pasa antes (−) o después (+)
+                </span>
+                <Stepper
+                  valor={p.desfase ?? 0}
+                  alCambiar={(v) => editarParadaDesfase(p.id, v)}
+                  min={-120}
+                  max={120}
+                  paso={5}
+                  sufijo="min"
+                />
+              </div>
+            </div>
           </div>
         ))}
-        <div className="mt-2 flex gap-2">
-          <input
-            value={nuevaParada.nombre}
-            onChange={(e) =>
-              setNuevaParada((s) => ({ ...s, nombre: e.target.value }))
-            }
-            onKeyDown={(e) => e.key === "Enter" && agregarParada()}
-            placeholder="Nombre de la parada"
-            className="min-w-0 flex-1 rounded-xl border-2 border-borde bg-soft px-3 py-2 text-tinta outline-none focus:border-acc"
-          />
-          <input
-            type="tel"
-            value={nuevaParada.minutos}
-            onChange={(e) =>
-              setNuevaParada((s) => ({ ...s, minutos: e.target.value }))
-            }
-            placeholder="min"
-            className="w-20 rounded-xl border-2 border-borde bg-soft px-2 py-2 text-center text-tinta outline-none focus:border-acc"
+
+        <div className="mt-2">
+          <Combo
+            valor={nuevaParada.nombre}
+            alCambiar={(v) => setNuevaParada({ nombre: v })}
+            opciones={lugares.filter(
+              (l) => !bus.paradas.some((p) => p.nombre.trim().toLowerCase() === l.toLowerCase())
+            )}
+            placeholder="Escribe o elige un lugar por donde pasa…"
+            alElegir={(v) => agregarParada(v)}
           />
           <button
-            onClick={agregarParada}
-            className="rounded-xl bg-acc px-4 font-bold text-onacc"
+            onClick={() => agregarParada()}
+            className="mt-2 w-full rounded-2xl bg-acc py-3 font-bold text-onacc active:scale-[0.98]"
           >
-            +
+            + Añadir parada
           </button>
         </div>
+        <p className="mt-2 text-xs text-subtinta">
+          Puedes reutilizar lugares de otros buses (aparecen como sugerencias) para que
+          Via entienda que varios buses pasan por el mismo sitio.
+        </p>
       </Tarjeta>
 
       <Tarjeta>
         <h3 className="mb-1 font-bold text-tinta">Horarios de salida</h3>
         <p className="mb-3 text-xs text-subtinta">
-          Separa con comas. Ej: 6:00, 7:30, 11:00
+          Escribe cada hora separada por comas. Ej: <b>6:00, 7:30, 11:00</b>
         </p>
         <Input
           label={`Salidas (${nombrePartes[0] || "lugar 1"} → ${nombrePartes[1] || "lugar 2"})`}
@@ -256,7 +286,8 @@ export default function BusFormulario({
         <Tarjeta>
           <h3 className="mb-1 font-bold text-tinta">Tarifas</h3>
           <p className="mb-3 text-xs text-subtinta">
-            Precio de subir en un lugar y bajar en otro. Deja vacío si no hay precio.
+            Escribe el precio de subir en un lugar y bajar en otro. Los buses cobran por
+            tramo: deja vacío si no hay precio para ese tramo.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -285,7 +316,7 @@ export default function BusFormulario({
                           <div className="h-9" />
                         ) : (
                           <input
-                            type="tel"
+                            type="text"
                             inputMode="decimal"
                             value={tarifaDe(desde.id, hasta.id)}
                             onChange={(e) =>
@@ -303,9 +334,8 @@ export default function BusFormulario({
             </table>
           </div>
           <p className="mt-2 text-xs text-subtinta">
-            Ej: en "Potrerillos - David", si Dolega está en medio, pones el precio de
-            Potrerillos→Dolega y Dolega→David con sus propios valores (no se suman
-            automáticamente; los buses cobran por tramo).
+            Ejemplo: en "Potrerillos - David", si Dolega está en medio, escribe el precio
+            Potrerillos→Dolega y Dolega→David por separado (no se suman solos).
           </p>
         </Tarjeta>
       )}

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Bus } from "../types";
 import { normalizar } from "../lib/busquedas";
 import { paradasDeBus, buscarParada } from "../lib/notificaciones";
-import { Tarjeta, Input } from "./ui";
+import { Tarjeta, Combo } from "./ui";
 
 interface LugarInfo {
   nombre: string;
@@ -26,6 +26,12 @@ export default function Lugares({ buses }: { buses: Bus[] }) {
     }
     return Array.from(mapa.values());
   }, [buses]);
+
+  const nombresLugares = useMemo(() => {
+    return Array.from(new Set(lugares.map((g) => g[0].nombre))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [lugares]);
 
   const lugaresFiltrados = useMemo(() => {
     if (!q.trim()) return lugares;
@@ -83,21 +89,35 @@ export default function Lugares({ buses }: { buses: Bus[] }) {
     <div className="animate-fade-in flex flex-col gap-4">
       <h2 className="text-xl font-bold text-tinta">Lugares</h2>
       <p className="text-sm text-subtinta">
-        Escribe dónde estás y dónde quieres ir (o solo un lugar) para ver qué buses pasan
-        y cuánto cobran.
+        Escribe dónde estás y dónde quieres ir (o elige de la lista). Via te dice qué
+        buses pasan y cuánto cobran.
       </p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Desde (dónde estoy)" value={desde} onChange={setDesde} placeholder="Ej: Dolega" />
-        <Input label="Hasta (a dónde voy)" value={hasta} onChange={setHasta} placeholder="Ej: David" />
+        <Combo
+          label="Desde (dónde estoy)"
+          valor={desde}
+          alCambiar={setDesde}
+          opciones={nombresLugares}
+          placeholder="Ej: Dolega"
+        />
+        <Combo
+          label="Hasta (a dónde voy)"
+          valor={hasta}
+          alCambiar={setHasta}
+          opciones={nombresLugares}
+          placeholder="Ej: David"
+        />
       </div>
 
       <div>
-        <Input
+        <Combo
           label="Buscar lugar"
-          value={q}
-          onChange={setQ}
+          valor={q}
+          alCambiar={setQ}
+          opciones={nombresLugares}
           placeholder="Filtrar lista de lugares…"
+          alElegir={(v) => setDesde(v)}
         />
       </div>
 

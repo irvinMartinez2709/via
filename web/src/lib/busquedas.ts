@@ -125,3 +125,19 @@ export function coincideFuzzy(texto: string, q: string): boolean {
         tPartes.some((tp) => difLevenshtein(tp, qp.slice(0, qp.length - 1)) <= umbral))
   );
 }
+
+export interface LugarBus {
+  nombre: string;
+  busId: string;
+  paradaId: string;
+}
+
+export function lugaresDeBuses(
+  buses: { id: string; paradas: { id: string; nombre: string }[] }[]
+): string[] {
+  const unicos = new Set<string>();
+  for (const b of buses) {
+    for (const p of b.paradas) unicos.add(p.nombre.trim());
+  }
+  return Array.from(unicos).filter(Boolean).sort((a, b) => a.localeCompare(b));
+}

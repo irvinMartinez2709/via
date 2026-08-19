@@ -29,6 +29,114 @@
     --c-onacc: 10 14 26;
   }
 
+  /* Presets de color — cada uno define su acento en claro y oscuro */
+  html[data-color="verde"]:not(.dark) {
+    --c-acc: 22 163 74;
+    --c-acc-fuerte: 21 128 61;
+    --c-acc-suave: 220 252 231;
+  }
+  html[data-color="verde"].dark {
+    --c-acc: 74 222 128;
+    --c-acc-fuerte: 34 197 94;
+    --c-acc-suave: 34 51 42;
+  }
+
+  html[data-color="rojo"]:not(.dark) {
+    --c-acc: 220 38 38;
+    --c-acc-fuerte: 185 28 28;
+    --c-acc-suave: 254 226 226;
+  }
+  html[data-color="rojo"].dark {
+    --c-acc: 248 113 113;
+    --c-acc-fuerte: 239 68 68;
+    --c-acc-suave: 64 28 32;
+  }
+
+  html[data-color="morado"]:not(.dark) {
+    --c-acc: 124 58 237;
+    --c-acc-fuerte: 109 40 217;
+    --c-acc-suave: 237 233 254;
+  }
+  html[data-color="morado"].dark {
+    --c-acc: 167 139 250;
+    --c-acc-fuerte: 139 92 246;
+    --c-acc-suave: 46 38 72;
+  }
+
+  html[data-color="naranja"]:not(.dark) {
+    --c-acc: 234 88 12;
+    --c-acc-fuerte: 194 65 12;
+    --c-acc-suave: 255 237 213;
+  }
+  html[data-color="naranja"].dark {
+    --c-acc: 251 146 60;
+    --c-acc-fuerte: 249 115 22;
+    --c-acc-suave: 64 40 20;
+  }
+
+  html[data-color="rosa"]:not(.dark) {
+    --c-acc: 219 39 119;
+    --c-acc-fuerte: 190 24 93;
+    --c-acc-suave: 252 231 243;
+  }
+  html[data-color="rosa"].dark {
+    --c-acc: 244 114 182;
+    --c-acc-fuerte: 236 72 153;
+    --c-acc-suave: 64 30 50;
+  }
+
+  html[data-color="teal"]:not(.dark) {
+    --c-acc: 13 148 136;
+    --c-acc-fuerte: 15 118 110;
+    --c-acc-suave: 240 253 250;
+  }
+  html[data-color="teal"].dark {
+    --c-acc: 45 212 191;
+    --c-acc-fuerte: 20 184 166;
+    --c-acc-suave: 28 56 54;
+  }
+
+  html[data-color="ambar"]:not(.dark) {
+    --c-acc: 180 83 9;
+    --c-acc-fuerte: 154 66 5;
+    --c-acc-suave: 254 243 199;
+  }
+  html[data-color="ambar"].dark {
+    --c-acc: 251 191 36;
+    --c-acc-fuerte: 245 158 11;
+    --c-acc-suave: 64 50 20;
+  }
+
+  html[data-color="cielo"]:not(.dark) {
+    --c-acc: 6 182 212;
+    --c-acc-fuerte: 8 145 178;
+    --c-acc-suave: 236 254 255;
+  }
+  html[data-color="cielo"].dark {
+    --c-acc: 34 211 238;
+    --c-acc-fuerte: 6 182 212;
+    --c-acc-suave: 24 54 62;
+  }
+
+  html[data-color="gris"]:not(.dark) {
+    --c-acc: 71 85 105;
+    --c-acc-fuerte: 51 65 85;
+    --c-acc-suave: 241 245 249;
+  }
+  html[data-color="gris"].dark {
+    --c-acc: 148 163 184;
+    --c-acc-fuerte: 100 116 139;
+    --c-acc-suave: 40 48 62;
+  }
+
+  /* Modo emojis: monocromático o sin emojis */
+  html[data-emojis="mono"] .emoji {
+    filter: grayscale(1) contrast(1.2) brightness(1.05);
+  }
+  html[data-emojis="ninguno"] .emoji {
+    display: none;
+  }
+
   html,
   body,
   #root {

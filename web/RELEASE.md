@@ -1,14 +1,17 @@
-# Via 1.0.0
+# Via 1.1.0
 
 ## Añadido
-- Gestión completa de buses: nombre (Lugar1 - Lugar2), lugar principal a la izquierda, paradas con minutos de recorrido, horarios de salida (ida y vuelta) y tarifas por tramo (de subir en un lugar y bajar en otro).
-- **Buses de hoy**: selecciona los buses que tomarás en el día, con lugar de subida, bajada y hora de salida. Muestra el total de dinero del día.
-- **Recordatorios**: aviso personalizable (por defecto 30 min antes) y aviso obligatorio 10 minutos antes de que pase por tu parada (Android).
-- **Lugares**: elige dónde estás y a dónde vas para ver qué buses pasan y cuánto cobran.
-- **Buscador inteligente**: ignora mayúsculas y acentos, con coincidencia difusa (una palabra similar encuentra bus, ruta o precios).
-- Filtros en la lista de buses (todos, favoritos, sin tarifas).
-- Tema claro/oscuro, exportar e importar respaldo JSON, sección Acerca de y Ayuda.
-- Cálculo de la hora a la que pasa cada bus por cada parada en ambos sentidos.
+- **Personalización**: 10 colores de la app (presets) y 3 modos de iconos (de color, blanco y negro, sin emojis).
+- **Controles interactivos**: botones − / + (con pulsación mantenida) para tiempos en vez de escribir.
+- **Desfase por parada**: un bus puede pasar antes (−) o después (+) de lo que marca el horario en cada lugar.
+- **Reutilizar lugares**: al añadir paradas se sugieren lugares de otros buses; varios buses pueden pasar por el mismo sitio.
+- **Lugares con lista**: en "Lugares" puedes escribir o elegir de una lista de todos los lugares guardados.
+- **UI propia**: los selectores usan listas de la app (sin el menú nativo de Android).
+- **Más resumen en Inicio**: conteo de lugares, paradas y aviso de buses sin tarifas; guía de primeros pasos cuando no hay datos.
+- Logo actualizado.
+
+## Cambios
+- Aviso de "pulsa atrás para salir" ahora aparece abajo.
 
 ## Instalación
 Descarga el APK y ábrelo en tu dispositivo Android. Los datos se guardan solo en tu teléfono.

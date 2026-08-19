@@ -1,18 +1,33 @@
-import type { Config, Datos, SeleccionDia, Tema } from "../types";
+import type { Bus, Config, Datos, Parada, SeleccionDia, Tema } from "../types";
 
 const CLAVE_DATOS = "via.datos.v1";
 const CLAVE_DIA = "via.dia.v1";
 const CLAVE_CONFIG = "via.config.v1";
 const CLAVE_TEMA = "via.tema.v1";
 
-const CONFIG_DEFECTO: Config = { recordatorioMin: 30 };
+const CONFIG_DEFECTO: Config = { recordatorioMin: 30, color: "azul", emojis: "color" };
+
+function migrarParada(p: Parada): Parada {
+  return { id: p.id, nombre: p.nombre, minutos: p.minutos, desfase: p.desfase ?? 0 };
+}
+
+function migrarBus(b: Bus): Bus {
+  return {
+    ...b,
+    paradas: (b.paradas || []).map(migrarParada),
+    tarifas: b.tarifas || [],
+    salidasIda: b.salidasIda || [],
+    salidasVuelta: b.salidasVuelta || [],
+    favorito: !!b.favorito,
+  };
+}
 
 export function leerDatos(): Datos {
   try {
     const raw = localStorage.getItem(CLAVE_DATOS);
     if (!raw) return { buses: [] };
     const d = JSON.parse(raw) as Datos;
-    return { buses: Array.isArray(d.buses) ? d.buses : [] };
+    return { buses: Array.isArray(d.buses) ? d.buses.map(migrarBus) : [] };
   } catch {
     return { buses: [] };
   }
@@ -49,7 +64,14 @@ export function leerConfig(): Config {
   try {
     const raw = localStorage.getItem(CLAVE_CONFIG);
     if (!raw) return { ...CONFIG_DEFECTO };
-    return { ...CONFIG_DEFECTO, ...(JSON.parse(raw) as Partial<Config>) };
+    const c = JSON.parse(raw) as Partial<Config>;
+    return {
+      ...CONFIG_DEFECTO,
+      ...c,
+      color: typeof c.color === "string" && c.color ? c.color : CONFIG_DEFECTO.color,
+      emojis:
+        c.emojis === "mono" || c.emojis === "ninguno" ? c.emojis : CONFIG_DEFECTO.emojis,
+    };
   } catch {
     return { ...CONFIG_DEFECTO };
   }

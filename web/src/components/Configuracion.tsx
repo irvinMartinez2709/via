@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import type { Config, Tema } from "../types";
+import { COLOR_PRESETS } from "../types";
 import { exportarTodo, importarTodo } from "../lib/almacen";
-import { Tarjeta } from "./ui";
+import { Tarjeta, Emoji } from "./ui";
 import ConfirmarDialog from "./ConfirmarDialog";
 
 declare const __APP_VERSION__: string;
@@ -78,7 +79,7 @@ export default function Configuracion({
                 : "border-borde bg-card text-subtinta"
             }`}
           >
-            ☀ Claro
+            <Emoji>☀</Emoji> Claro
           </button>
           <button
             onClick={() => onTema("dark")}
@@ -88,8 +89,66 @@ export default function Configuracion({
                 : "border-borde bg-card text-subtinta"
             }`}
           >
-            🌙 Oscuro
+            <Emoji>🌙</Emoji> Oscuro
           </button>
+        </div>
+      </Tarjeta>
+
+      <Tarjeta>
+        <h3 className="mb-1 font-bold text-tinta">Color de la app</h3>
+        <p className="mb-3 text-xs text-subtinta">
+          Cambia el color de los botones y elementos destacados.
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          {COLOR_PRESETS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onConfig({ ...config, color: c.id })}
+              className={`flex flex-col items-center gap-1 rounded-2xl border-2 p-2 ${
+                config.color === c.id
+                  ? "border-acc bg-acc-suave"
+                  : "border-borde bg-card"
+              }`}
+            >
+              <span
+                className="h-8 w-8 rounded-full border-2 border-black/10"
+                style={{ backgroundColor: c.preview }}
+              />
+              <span
+                className={`text-[10px] font-semibold ${
+                  config.color === c.id ? "text-acc" : "text-subtinta"
+                }`}
+              >
+                {c.nombre}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta>
+        <h3 className="mb-1 font-bold text-tinta">Iconos y emojis</h3>
+        <p className="mb-3 text-xs text-subtinta">
+          Elige cómo se ven los iconos de la app.
+        </p>
+        <div className="flex gap-2">
+          {[
+            { id: "color" as const, label: "De color", icono: "🎨" },
+            { id: "mono" as const, label: "Blanco y negro", icono: "◐" },
+            { id: "ninguno" as const, label: "Sin emojis", icono: "–" },
+          ].map((o) => (
+            <button
+              key={o.id}
+              onClick={() => onConfig({ ...config, emojis: o.id })}
+              className={`flex-1 rounded-2xl border-2 px-3 py-2.5 font-semibold ${
+                config.emojis === o.id
+                  ? "border-acc bg-acc text-onacc"
+                  : "border-borde bg-card text-subtinta"
+              }`}
+            >
+              <Emoji>{o.icono}</Emoji> {o.label}
+            </button>
+          ))}
         </div>
       </Tarjeta>
 
@@ -106,6 +165,7 @@ export default function Configuracion({
             onChange={(e) => {
               const n = parseInt(e.target.value, 10);
               onConfig({
+                ...config,
                 recordatorioMin: isNaN(n) ? 0 : Math.min(600, Math.max(0, n)),
               });
             }}
@@ -179,9 +239,11 @@ export default function Configuracion({
             ¿Cómo agrego un bus?
           </summary>
           <p className="pt-1">
-            En "Mis buses" pulsa + Nuevo. Pon el nombre como "Lugar1 - Lugar2" (el
-            principal va a la izquierda). Luego añade paradas con los minutos que tarda en
-            llegar, los horarios de salida y las tarifas.
+            En "Mis buses" pulsa <b>+ Nuevo</b>. Escribe el nombre como{" "}
+            <b>Lugar1 - Lugar2</b> (el principal va a la izquierda). Añade los lugares por
+            donde pasa, ajusta con los botones − / + cuántos minutos tarda en llegar y si
+            pasa antes o después de lo marcado. Luego escribe los horarios de salida y las
+            tarifas.
           </p>
         </details>
         <details className="text-sm text-subtinta">
@@ -199,9 +261,9 @@ export default function Configuracion({
             ¿Cuándo pasa el bus por mi parada?
           </summary>
           <p className="pt-1">
-            En el formulario del bus cada parada tiene "min" (cuántos minutos tarda desde
-            la salida en el lugar principal). Con eso, Via calcula la hora exacta a la que
-            pasa por cada lugar en ambos sentidos.
+            Cada parada tiene "minutos desde la salida" (cuánto tarda el bus en llegar).
+            Si el bus pasa antes o después de lo que marca el horario, ajústalo con el
+            desfase − / +. Via calcula la hora exacta de paso en ambos sentidos.
           </p>
         </details>
         <details className="text-sm text-subtinta">

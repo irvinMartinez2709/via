@@ -7,11 +7,13 @@ import BusFormulario from "./BusFormulario";
 
 export default function GestionarBuses({
   buses,
+  lugares,
   onGuardar,
   onEliminar,
   onToggleFavorito,
 }: {
   buses: Bus[];
+  lugares: string[];
   onGuardar: (b: Bus) => void;
   onEliminar: (id: string) => void;
   onToggleFavorito: (id: string) => void;
@@ -44,6 +46,7 @@ export default function GestionarBuses({
         </div>
         <BusFormulario
           busInicial={editando === "nuevo" ? null : editando}
+          lugares={lugares}
           onGuardar={(b) => {
             onGuardar(b);
             setEditando(null);

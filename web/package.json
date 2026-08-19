@@ -1,7 +1,7 @@
 {
   "name": "via",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Via — Tu guía de transporte: anota buses, horarios, precios y organiza tu día.",
   "scripts": {

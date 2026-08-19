@@ -35,6 +35,11 @@ function paradaMinutos(bus: Bus, paradaId: string): number {
   return p ? p.minutos : 0;
 }
 
+function paradaDesfase(bus: Bus, paradaId: string): number {
+  const p = bus.paradas.find((x) => x.id === paradaId);
+  return p ? p.desfase ?? 0 : 0;
+}
+
 export function calcularHoraPaso(
   bus: Bus,
   direccion: "ida" | "vuelta",
@@ -46,8 +51,9 @@ export function calcularHoraPaso(
     ? Math.max(...bus.paradas.map((p) => p.minutos))
     : 0;
   const pMin = paradaMinutos(bus, paradaId);
+  const desfase = paradaDesfase(bus, paradaId);
   const offset = direccion === "ida" ? pMin : total - pMin;
-  return minutosAHora(mMi + offset);
+  return minutosAHora(mMi + offset + desfase);
 }
 
 function horaAMinutos(h: string): number {

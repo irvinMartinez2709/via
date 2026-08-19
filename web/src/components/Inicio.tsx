@@ -35,6 +35,14 @@ export default function Inicio({
     return { total, conocido };
   }, [dia, buses]);
 
+  const estadisticas = useMemo(() => {
+    const totalParadas = buses.reduce((acc, b) => acc + b.paradas.length, 0);
+    const conTarifas = buses.filter((b) => b.tarifas.length > 0).length;
+    const lugares = new Set<string>();
+    for (const b of buses) for (const p of b.paradas) lugares.add(p.nombre.trim());
+    return { totalParadas, conTarifas, totalLugares: lugares.size };
+  }, [buses]);
+
   const resultadosBusqueda = useMemo(() => {
     if (!q.trim()) return [];
     return coincidenBuses(buses, q).slice(0, 6);
@@ -59,6 +67,8 @@ export default function Inicio({
   }, [dia, buses, ahora]);
 
   const favoritos = buses.filter((b) => b.favorito);
+
+  const sinTarifas = buses.filter((b) => b.tarifas.length === 0);
 
   return (
     <div className="animate-fade-in flex flex-col gap-4">
@@ -97,6 +107,24 @@ export default function Inicio({
         </div>
       )}
 
+      {buses.length === 0 && (
+        <Tarjeta>
+          <h2 className="mb-2 font-bold text-tinta">Bienvenido a Via 👋</h2>
+          <div className="flex flex-col gap-2 text-sm text-subtinta">
+            <p>Paso 1: en <b className="text-tinta">Buses</b> pulsa + Nuevo y guarda tu primer bus (ej: "Potrerillos - David").</p>
+            <p>Paso 2: añade los lugares por donde pasa, sus horarios y las tarifas.</p>
+            <p>Paso 3: en <b className="text-tinta">Hoy</b> elige qué buses tomarás y cuánto gastarás.</p>
+            <p>Paso 4: en <b className="text-tinta">Lugares</b> consulta qué buses conectan dos sitios.</p>
+          </div>
+          <button
+            onClick={() => onNavegar("buses")}
+            className="mt-3 w-full rounded-2xl bg-acc py-3 font-bold text-onacc active:scale-[0.98]"
+          >
+            Añadir mi primer bus
+          </button>
+        </Tarjeta>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => onNavegar("hoy")}
@@ -119,7 +147,38 @@ export default function Inicio({
           <p className="mt-1 text-2xl font-extrabold text-tinta">{buses.length}</p>
           <p className="text-xs text-subtinta">rutas guardadas</p>
         </button>
+        <button
+          onClick={() => onNavegar("lugares")}
+          className="rounded-3xl border-2 border-borde bg-card p-4 text-left active:scale-[0.98]"
+        >
+          <p className="text-xs font-semibold text-subtinta">Lugares</p>
+          <p className="mt-1 text-2xl font-extrabold text-tinta">
+            {estadisticas.totalLugares}
+          </p>
+          <p className="text-xs text-subtinta">lugares en tus rutas</p>
+        </button>
+        <div className="rounded-3xl border-2 border-borde bg-card p-4 text-left">
+          <p className="text-xs font-semibold text-subtinta">Paradas</p>
+          <p className="mt-1 text-2xl font-extrabold text-tinta">
+            {estadisticas.totalParadas}
+          </p>
+          <p className="text-xs text-subtinta">en total</p>
+        </div>
       </div>
+
+      {sinTarifas.length > 0 && (
+        <button
+          onClick={() => onNavegar("buses")}
+          className="rounded-2xl border-2 border-amber-400/40 bg-amber-500/10 px-4 py-3 text-left text-sm active:scale-[0.98]"
+        >
+          <span className="font-bold text-amber-600">
+            {sinTarifas.length} bus{sinTarifas.length === 1 ? "" : "es"} sin tarifas
+          </span>
+          <span className="ml-1 text-subtinta">
+            — agrega los precios para que el total del día sea exacto.
+          </span>
+        </button>
+      )}
 
       {proximos.length > 0 && (
         <div>

@@ -10,7 +10,7 @@ import {
   notificacionesDisponibles,
   pedirPermisoNotificaciones,
 } from "../lib/notificaciones";
-import { Tarjeta } from "./ui";
+import { Tarjeta, Selector, Stepper } from "./ui";
 
 function fechaHoy(): string {
   const d = new Date();
@@ -37,7 +37,7 @@ export default function BusesHoy({
   const [subidaId, setSubidaId] = useState("");
   const [bajadaId, setBajadaId] = useState("");
   const [hora, setHora] = useState("");
-  const [recordatorio, setRecordatorio] = useState(String(config.recordatorioMin));
+  const [recordatorio, setRecordatorio] = useState(config.recordatorioMin);
   const [aviso, setAviso] = useState("");
 
   const busSeleccionado = buses.find((b) => b.id === selBusId);
@@ -87,7 +87,6 @@ export default function BusesHoy({
       setAviso("Subida y bajada no pueden ser la misma parada.");
       return;
     }
-    const rec = parseInt(recordatorio, 10);
     const sel: SeleccionDia = {
       id: uuid(),
       busId: busSeleccionado.id,
@@ -96,7 +95,7 @@ export default function BusesHoy({
       paradaBajadaId: bajadaId,
       direccion,
       hora,
-      recordatorioMin: isNaN(rec) || rec <= 0 ? 10 : rec,
+      recordatorioMin: recordatorio <= 0 ? 10 : recordatorio,
     };
     if (notificacionesDisponibles()) {
       const ok = await pedirPermisoNotificaciones();
@@ -183,26 +182,18 @@ export default function BusesHoy({
       <Tarjeta>
         <h3 className="mb-3 font-bold text-tinta">Agregar bus al día</h3>
         <div className="flex flex-col gap-3">
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-subtinta">Bus</span>
-            <select
-              value={selBusId}
-              onChange={(e) => {
-                setSelBusId(e.target.value);
-                setSubidaId("");
-                setBajadaId("");
-                setHora("");
-              }}
-              className="w-full rounded-2xl border-2 border-borde bg-soft px-4 py-3 text-tinta outline-none focus:border-acc"
-            >
-              <option value="">Selecciona un bus…</option>
-              {buses.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Selector
+            label="Bus"
+            valor={selBusId}
+            alElegir={(id) => {
+              setSelBusId(id);
+              setSubidaId("");
+              setBajadaId("");
+              setHora("");
+            }}
+            opciones={buses.map((b) => ({ id: b.id, texto: b.nombre }))}
+            placeholder="Selecciona un bus…"
+          />
 
           {busSeleccionado && (
             <>
@@ -230,72 +221,45 @@ export default function BusesHoy({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-sm font-semibold text-subtinta">
-                    Subo en
-                  </span>
-                  <select
-                    value={subidaId}
-                    onChange={(e) => setSubidaId(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-borde bg-soft px-3 py-3 text-tinta outline-none focus:border-acc"
-                  >
-                    <option value="">¿Dónde subes?</option>
-                    {paradas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm font-semibold text-subtinta">
-                    Bajo en
-                  </span>
-                  <select
-                    value={bajadaId}
-                    onChange={(e) => setBajadaId(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-borde bg-soft px-3 py-3 text-tinta outline-none focus:border-acc"
-                  >
-                    <option value="">¿Dónde bajas?</option>
-                    {paradas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <Selector
+                  label="Subo en"
+                  valor={subidaId}
+                  alElegir={setSubidaId}
+                  opciones={paradas.map((p) => ({ id: p.id, texto: p.nombre }))}
+                  placeholder="¿Dónde subes?"
+                />
+                <Selector
+                  label="Bajo en"
+                  valor={bajadaId}
+                  alElegir={setBajadaId}
+                  opciones={paradas.map((p) => ({ id: p.id, texto: p.nombre }))}
+                  placeholder="¿Dónde bajas?"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <label className="block">
+                <Selector
+                  label="Hora de salida"
+                  valor={hora}
+                  alElegir={setHora}
+                  opciones={horasDisponibles.map((h) => ({ id: h, texto: horaTexto(h) }))}
+                  placeholder="Elige hora…"
+                />
+                <div>
                   <span className="mb-1 block text-sm font-semibold text-subtinta">
-                    Hora de salida
+                    Recordar antes
                   </span>
-                  <select
-                    value={hora}
-                    onChange={(e) => setHora(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-borde bg-soft px-3 py-3 text-tinta outline-none focus:border-acc"
-                  >
-                    <option value="">Elige hora…</option>
-                    {horasDisponibles.map((h) => (
-                      <option key={h} value={h}>
-                        {horaTexto(h)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm font-semibold text-subtinta">
-                    Recordar antes (min)
-                  </span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={recordatorio}
-                    onChange={(e) => setRecordatorio(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-borde bg-soft px-3 py-3 text-tinta outline-none focus:border-acc"
-                  />
-                </label>
+                  <div className="rounded-2xl border-2 border-borde bg-soft px-3 py-1.5">
+                    <Stepper
+                      valor={recordatorio}
+                      alCambiar={setRecordatorio}
+                      min={0}
+                      max={600}
+                      paso={5}
+                      sufijo="min"
+                    />
+                  </div>
+                </div>
               </div>
 
               {subidaId && bajadaId && subidaId !== bajadaId && (

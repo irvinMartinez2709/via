@@ -8,7 +8,9 @@ import GestionarBuses from "./components/GestionarBuses";
 import BusesHoy from "./components/BusesHoy";
 import Lugares from "./components/Lugares";
 import Configuracion from "./components/Configuracion";
+import { Emoji } from "./components/ui";
 import { cancelarRecordatorios } from "./lib/notificaciones";
+import { lugaresDeBuses } from "./lib/busquedas";
 
 type Seccion = "inicio" | "buses" | "hoy" | "lugares" | "config";
 
@@ -22,7 +24,9 @@ export default function App() {
     const html = document.documentElement;
     html.classList.toggle("dark", d.tema === "dark");
     html.classList.toggle("light", d.tema === "light");
-  }, [d.tema]);
+    html.setAttribute("data-color", d.config.color);
+    html.setAttribute("data-emojis", d.config.emojis);
+  }, [d.tema, d.config]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -47,6 +51,7 @@ export default function App() {
   }
 
   const [avisoBack, setAvisoBack] = useState(false);
+  const lugares = lugaresDeBuses(d.datos.buses);
 
   const nav = [
     { id: "inicio" as Seccion, label: "Inicio", icono: "🏠" },
@@ -67,6 +72,7 @@ export default function App() {
         {seccion === "buses" && (
           <GestionarBuses
             buses={d.datos.buses}
+            lugares={lugares}
             onGuardar={d.guardarBus}
             onEliminar={d.eliminarBus}
             onToggleFavorito={d.toggleFavorito}
@@ -98,7 +104,7 @@ export default function App() {
       </main>
 
       {avisoBack && (
-        <div className="pointer-events-none fixed inset-x-0 top-6 z-50 flex justify-center px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
           <div className="rounded-full bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
             Pulsa atrás otra vez para salir
           </div>
@@ -115,7 +121,7 @@ export default function App() {
                 seccion === n.id ? "text-acc" : "text-subtinta"
               }`}
             >
-              <span className="text-lg leading-none">{n.icono}</span>
+              <Emoji className="text-lg leading-none">{n.icono}</Emoji>
               {n.label}
             </button>
           ))}

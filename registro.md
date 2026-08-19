@@ -29,3 +29,8 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 - Release 1.0.0 creada con asset Via-1.0.0.apk (3.9 MB), descargado a apk/.
 - registro.md commiteado (c9b2701).
 - Instalado por adb en Redmi (2409BRN2CL): Success; versionName 1.0.0, versionCode 10000; arranque sin FATAL (PID confirmado).
+
+## Sesion 6 - 2026-08-19
+- Requisitos: logo nuevo, color de elementos (8+ presets), modos de emojis (color/mono/ninguno), Lugares con lista desplegable, tiempos de parada con stepper interactivo y desfase (pasa antes/despues del horario), fix tarifas/paradas, aviso de salir abajo, UI propia sin select nativo, reutilizar lugares entre buses, ayuda mas clara, mas resumen en Inicio.
+- Implementado: tipos (Parada.desfase, Config.color/emojis) + migracion en almacen; 10 presets CSS; componente Emoji; Selector propio (reemplaza select), Stepper (+/- con pulsacion mantenida), Combo autocompletar; BusFormulario con steppers y sugerencias de lugares de otros buses; BusesHoy sin select nativo; Lugares con combobox; aviso de salir en bottom-24; Configuracion con presets y emojis; Inicio con resumen (lugares, paradas, sin tarifas, guia primer bus); RELEASE 1.1.0; logo copiado.
+- Playwright 3/3 PASS. lint + build OK. version 1.1.0.
