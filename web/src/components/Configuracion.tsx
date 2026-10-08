@@ -1,14 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Config, Tema } from "../types";
 import { COLOR_PRESETS } from "../types";
 import { exportarTodo, importarTodo } from "../lib/almacen";
 import { esColorHex } from "../lib/colores";
-import {
-  importarMapa,
-  cargarMapa,
-  quitarMapa,
-  type InfoMapa,
-} from "../lib/mapa";
 import { Tarjeta, Emoji } from "./ui";
 import ConfirmarDialog from "./ConfirmarDialog";
 
@@ -20,54 +14,21 @@ export default function Configuracion({
   onConfig,
   onTema,
   onLimpiar,
-  onAbrirMapa,
 }: {
   config: Config;
   tema: Tema;
   onConfig: (c: Config) => void;
   onTema: (t: Tema) => void;
   onLimpiar: () => void;
-  onAbrirMapa: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const mapaRef = useRef<HTMLInputElement>(null);
   const [aviso, setAviso] = useState("");
   const [confirmarLimpiar, setConfirmarLimpiar] = useState(false);
-  const [confirmarImportar, setConfirmarImportar] = useState<string | null>(null);
   const [textoImportar, setTextoImportar] = useState("");
-  const [estadoMapa, setEstadoMapa] = useState<InfoMapa | null>(null);
 
   const colorHex = esColorHex(config.color)
     ? config.color
     : COLOR_PRESETS.find((c) => c.id === config.color)?.preview || "#2563eb";
-
-  useEffect(() => {
-    void cargarMapa().then((r) => {
-      if (r) setEstadoMapa(r.info);
-    });
-  }, []);
-
-  async function importarMbtiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    try {
-      const buf = await f.arrayBuffer();
-      const info = await importarMapa(buf);
-      setEstadoMapa(info);
-      setAviso("Mapa sin internet activado.");
-      window.dispatchEvent(new Event("via:mapa"));
-    } catch {
-      setAviso("El archivo no es un mapa válido (.mbtiles).");
-    }
-    e.target.value = "";
-  }
-
-  async function quitarMbtiles() {
-    await quitarMapa();
-    setEstadoMapa(null);
-    setAviso("Mapa sin internet quitado.");
-    window.dispatchEvent(new Event("via:mapa"));
-  }
 
   function exportar() {
     const blob = new Blob([exportarTodo()], { type: "application/json" });
@@ -133,6 +94,35 @@ export default function Configuracion({
             }`}
           >
             <Emoji>🌙</Emoji> Oscuro
+          </button>
+        </div>
+      </Tarjeta>
+
+      <Tarjeta>
+        <h3 className="mb-1 font-bold text-tinta">Formato de hora</h3>
+        <p className="mb-3 text-xs text-subtinta">
+          Cómo se muestran los horarios de los buses en toda la app.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onConfig({ ...config, formatoHora: "12" })}
+            className={`flex-1 rounded-2xl border-2 px-4 py-2.5 font-semibold ${
+              config.formatoHora === "12"
+                ? "border-acc bg-acc text-onacc"
+                : "border-borde bg-card text-subtinta"
+            }`}
+          >
+            1:10 p. m. <span className="text-xs">(12 h)</span>
+          </button>
+          <button
+            onClick={() => onConfig({ ...config, formatoHora: "24" })}
+            className={`flex-1 rounded-2xl border-2 px-4 py-2.5 font-semibold ${
+              config.formatoHora === "24"
+                ? "border-acc bg-acc text-onacc"
+                : "border-borde bg-card text-subtinta"
+            }`}
+          >
+            13:10 <span className="text-xs">(24 h militar)</span>
           </button>
         </div>
       </Tarjeta>
@@ -213,31 +203,6 @@ export default function Configuracion({
       </Tarjeta>
 
       <Tarjeta>
-        <h3 className="mb-3 font-bold text-tinta">Recordatorios</h3>
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-subtinta">
-            Recordatorio predeterminado (minutos antes)
-          </span>
-          <input
-            type="tel"
-            inputMode="numeric"
-            value={config.recordatorioMin}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              onConfig({
-                ...config,
-                recordatorioMin: isNaN(n) ? 0 : Math.min(600, Math.max(0, n)),
-              });
-            }}
-            className="w-full rounded-2xl border-2 border-borde bg-soft px-4 py-3 text-tinta outline-none focus:border-acc"
-          />
-        </label>
-        <p className="mt-2 text-xs text-subtinta">
-          Además siempre se recuerda 10 minutos antes de la hora a la que pasa el bus.
-        </p>
-      </Tarjeta>
-
-      <Tarjeta>
         <h3 className="mb-3 font-bold text-tinta">Datos</h3>
         <div className="flex flex-col gap-2">
           <button
@@ -281,47 +246,6 @@ export default function Configuracion({
       </Tarjeta>
 
       <Tarjeta>
-        <h3 className="mb-1 font-bold text-tinta">Mapa sin internet</h3>
-        <p className="mb-3 text-xs text-subtinta">
-          Descarga un archivo <b>.mbtiles</b> del mapa de Chiriquí (por ejemplo en{" "}
-          <b>openmaptiles.org</b> o <b>osmbuildings.org</b>) y colócalo aquí. Luego verás
-          el mapa de Chiriquí sin conexión en la sección "Mapa".
-        </p>
-        <button
-          onClick={() => mapaRef.current?.click()}
-          className="w-full rounded-2xl border-2 border-borde bg-soft px-4 py-3 font-semibold text-tinta active:scale-[0.98]"
-        >
-          Seleccionar archivo .mbtiles
-        </button>
-        <input
-          ref={mapaRef}
-          type="file"
-          accept=".mbtiles,.sqlite,.db"
-          className="hidden"
-          onChange={importarMbtiles}
-        />
-        {estadoMapa && (
-          <div className="mt-2 rounded-2xl bg-acc-suave px-3 py-2 text-xs font-semibold text-acc">
-            {estadoMapa.nombre} — {estadoMapa.tiles} mosaicos
-          </div>
-        )}
-        <div className="mt-2 flex flex-col gap-2">
-          <button
-            onClick={onAbrirMapa}
-            className="w-full rounded-2xl bg-acc px-4 py-2.5 font-bold text-onacc active:scale-[0.98]"
-          >
-            Ver mapa
-          </button>
-          <button
-            onClick={quitarMbtiles}
-            className="w-full rounded-2xl bg-red-500/10 px-4 py-2.5 font-bold text-red-500 active:scale-[0.98]"
-          >
-            Quitar mapa sin internet
-          </button>
-        </div>
-      </Tarjeta>
-
-      <Tarjeta>
         <h3 className="mb-1 font-bold text-tinta">Acerca de</h3>
         <div className="text-sm text-subtinta">
           <p>
@@ -337,74 +261,75 @@ export default function Configuracion({
         <h3 className="mb-1 font-bold text-tinta">Ayuda rápida</h3>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Cómo agrego un bus?
+            ¿Cómo creo un bus?
           </summary>
           <p className="pt-1">
-            En "Mis buses" pulsa <b>+ Nuevo</b>. Escribe el nombre como{" "}
-            <b>Lugar1 - Lugar2</b> (el principal va a la izquierda). Añade los lugares por
-            donde pasa el bus, escribe los horarios de salida y, si quieres, el precio.
+            En <b>Buses</b> verás dos cuadros: el de la <b>izquierda</b> es el origen y el
+            de la <b>derecha</b> el destino (ej: <b>Potrerillos Abajo</b> –{" "}
+            <b>David</b>). Pulsa <b>+ Añadir bus</b>. Si el lugar no existía, se crea solo.
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Qué son los "minutos en llegar desde la salida"?
+            ¿Cómo añado las rutas de un bus?
           </summary>
           <p className="pt-1">
-            Es cuánto tarda el bus en llegar a cada parada contando desde que sale. Por
-            ejemplo: si sale a las 6:00 y una parada está a 10 minutos, el bus pasa por ahí
-            a las 6:10. Ajusta el número con los botones − / +.
+            En la tarjeta del bus pulsa <b>Añadir rutas</b>. Se abre una lista con tus
+            lugares: toca para añadirlos en orden (usa ↑ ↓ para reordenar). La{" "}
+            <b>ida</b> y la <b>vuelta</b> se eligen por separado porque las calles no son
+            las mismas. Puedes buscar escribiendo o deslizando la lista.
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Y "pasa antes o después de lo marcado"?
+            ¿Qué es la jerarquía de nodos?
           </summary>
           <p className="pt-1">
-            Es opcional y casi nunca hace falta. Si en la parada el cartel dice que el bus
-            pasa a una hora, pero en realidad siempre pasa más temprano o más tarde, lo
-            ajustas aquí. Ejemplo: el bus pasa 5 min antes de lo que marca el horario →
-            pon <b>−5</b>.
+            El orden de los lugares forma una cadena como{" "}
+            <b>David ↔ Algarrobos ↔ Altamar ↔ Dolega</b>. Así sabes por dónde pasa el bus
+            antes de llegar y qué tan lejos está un lugar de otro.
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Cómo funcionan las tarifas?
+            ¿Cómo pongo los horarios de un bus?
           </summary>
           <p className="pt-1">
-            Cada precio es de subir en un lugar y bajar en otro. Lo más fácil: escribe el{" "}
-            <b>precio del recorrido completo</b> (de la primera a la última parada). Si los
-            buses cobran distinto por tramos, añade precios por tramo con{" "}
-            <b>+ Añadir precio por tramo</b>. No se suman solos; cada tramo tiene su precio.
+            En la tarjeta del bus pulsa <b>⏰ Horarios</b>. Elige <b>Ida</b> o{" "}
+            <b>Vuelta</b> y añade una hora de salida; luego pon la hora a la que pasa por
+            cada lugar de esa ruta (los subhorarios). No son exactas: ajústalas a tu
+            gusto. El formato (1:10 p. m. o 13:10) lo cambias en{" "}
+            <b>Formato de hora</b>.
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Cuándo pasa el bus por mi parada?
+            ¿Cómo encuentro un bus de A a B?
           </summary>
           <p className="pt-1">
-            En "Buses de hoy" eliges tu bus, dónde subes y a qué hora sale. Via suma los
-            minutos de la parada y te dice la hora exacta de paso. Se recuerda 10 minutos
-            antes.
+            En <b>Viaje</b> escribes de dónde vienes y a dónde vas. Via lista los buses
+            que pasan por esos dos lugares y te muestra los lugares por los que pasas
+            para llegar. Al tocar un bus se ven sus horarios, tus gastos registrados en
+            ese tramo y su ruta en Google Maps (necesita internet).
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Cómo funcionan los recordatorios?
+            ¿Cómo registro lo que gasté?
           </summary>
           <p className="pt-1">
-            Al añadir un bus a "Buses de hoy" puedes poner cuántos minutos antes avisar
-            (por defecto 30). Siempre habrá también un aviso 10 minutos antes de que pase
-            por tu parada.
+            En <b>Gastos</b> eliges el lugar A y el B (solo si existe algún bus que cumpla
+            esa ruta), seleccionas el bus que usaste, escribes el monto y pulsas{" "}
+            <b>Guardar gasto</b>. Tus gastos quedan en la lista de abajo.
           </p>
         </details>
         <details className="text-sm text-subtinta">
           <summary className="cursor-pointer py-1 font-semibold text-tinta">
-            ¿Cómo funciona el mapa sin internet?
+            ¿El mapa funciona sin internet?
           </summary>
           <p className="pt-1">
-            En "Más" puedes añadir un archivo <b>.mbtiles</b> del mapa de Chiriquí. Se
-            guarda en tu teléfono y podrás verlo sin conexión en la sección "Mapa". Con
-            internet, el mapa se muestra solo.
+            No: el mapa usa un iframe de Google Maps y solo se muestra cuando hay
+            conexión. Sin internet verás el recorrido escrito igualmente.
           </p>
         </details>
       </Tarjeta>
@@ -427,27 +352,15 @@ export default function Configuracion({
       {confirmarLimpiar && (
         <ConfirmarDialog
           titulo="Borrar todos los datos"
-          mensaje="Se eliminarán todos los buses, tus buses de hoy y la configuración. Esta acción no se puede deshacer."
-          confirmar={async () => {
-            await onLimpiar();
+          mensaje="Se eliminarán tus lugares, buses, rutas y gastos. Esta acción no se puede deshacer."
+          confirmar={() => {
+            onLimpiar();
             setConfirmarLimpiar(false);
             setAviso("Datos borrados.");
           }}
           cancelar={() => setConfirmarLimpiar(false)}
           peligro
           textoConfirmar="Borrar todo"
-        />
-      )}
-
-      {confirmarImportar && (
-        <ConfirmarDialog
-          titulo="Importar datos"
-          mensaje={confirmarImportar}
-          confirmar={() => {
-            setConfirmarImportar(null);
-            importarPegado();
-          }}
-          cancelar={() => setConfirmarImportar(null)}
         />
       )}
     </div>

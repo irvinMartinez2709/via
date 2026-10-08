@@ -1,194 +1,200 @@
 import { useMemo, useState } from "react";
-import type { Bus } from "../types";
-import { normalizar } from "../lib/busquedas";
-import { paradasDeBus, buscarParada } from "../lib/notificaciones";
-import { Tarjeta, Combo } from "./ui";
+import type { Bus, Lugar } from "../types";
+import { normalizar, coincideFuzzy } from "../lib/busquedas";
+import { Tarjeta } from "./ui";
+import ConfirmarDialog from "./ConfirmarDialog";
 
-interface LugarInfo {
-  nombre: string;
-  bus: Bus;
-  paradaId: string;
-}
-
-export default function Lugares({ buses }: { buses: Bus[] }) {
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
+export default function Lugares({
+  lugares,
+  buses,
+  onAñadir,
+  onRenombrar,
+  onEliminar,
+}: {
+  lugares: Lugar[];
+  buses: Bus[];
+  onAñadir: (nombre: string) => Lugar | null;
+  onRenombrar: (id: string, nombre: string) => void;
+  onEliminar: (id: string) => void;
+}) {
+  const [nuevo, setNuevo] = useState("");
   const [q, setQ] = useState("");
+  const [aviso, setAviso] = useState("");
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [textoEdit, setTextoEdit] = useState("");
+  const [borrar, setBorrar] = useState<Lugar | null>(null);
 
-  const lugares = useMemo(() => {
-    const mapa = new Map<string, LugarInfo[]>();
+  const uso = useMemo(() => {
+    const mapa = new Map<string, number>();
     for (const b of buses) {
-      for (const p of paradasDeBus(b)) {
-        const key = normalizar(p.nombre);
-        if (!mapa.has(key)) mapa.set(key, []);
-        mapa.get(key)!.push({ nombre: p.nombre, bus: b, paradaId: p.id });
+      for (const id of new Set([...b.ida, ...b.vuelta])) {
+        mapa.set(id, (mapa.get(id) || 0) + 1);
       }
     }
-    return Array.from(mapa.values());
+    return mapa;
   }, [buses]);
 
-  const nombresLugares = useMemo(() => {
-    return Array.from(new Set(lugares.map((g) => g[0].nombre))).sort((a, b) =>
-      a.localeCompare(b)
-    );
-  }, [lugares]);
-
-  const lugaresFiltrados = useMemo(() => {
-    if (!q.trim()) return lugares;
-    const query = normalizar(q);
-    return lugares.filter((grupo) => normalizar(grupo[0].nombre).includes(query));
+  const filtrados = useMemo(() => {
+    const lista = [...lugares].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (!q.trim()) return lista;
+    return lista.filter((l) => coincideFuzzy(l.nombre, q));
   }, [lugares, q]);
 
-  function precioEntre(bus: Bus, desdeId: string, hastaId: string): number | null {
-    if (!desdeId || !hastaId || desdeId === hastaId) return null;
-    const t = bus.tarifas.find((x) => x.desdeId === desdeId && x.hastaId === hastaId);
-    return t ? t.precio : null;
-  }
-
-  type Resultado = {
-    bus: Bus;
-    desdeId: string;
-    hastaId: string;
-    precio: number | null;
-  };
-
-  function resultados(): Resultado[] {
-    if (!desde && !hasta) return [];
-    const desdeKey = normalizar(desde);
-    const hastaKey = normalizar(hasta);
-    const salida: Resultado[] = [];
-    for (const grupo of lugares) {
-      const nombre = normalizar(grupo[0].nombre);
-      if (desde && hasta && nombre !== desdeKey && nombre !== hastaKey) continue;
-      for (const info of grupo) {
-        const esDesde = desde && nombre === desdeKey;
-        const esHasta = hasta && nombre === hastaKey;
-        if (!esDesde && !esHasta) continue;
-        const otros = esDesde ? hasta : desde;
-        const paradas = paradasDeBus(info.bus);
-        const otraParada = paradas.find((p) => normalizar(p.nombre) === normalizar(otros));
-        if (!otraParada) continue;
-        const desdeId = esDesde ? info.paradaId : otraParada.id;
-        const hastaId = esDesde ? otraParada.id : info.paradaId;
-        salida.push({
-          bus: info.bus,
-          desdeId,
-          hastaId,
-          precio: precioEntre(info.bus, desdeId, hastaId),
-        });
-      }
+  function añadir() {
+    const nombre = nuevo.trim();
+    if (!nombre) return;
+    const duplicado = lugares.some(
+      (l) => normalizar(l.nombre) === normalizar(nombre)
+    );
+    if (duplicado) {
+      setAviso(`"${nombre}" ya existe en tus lugares.`);
+      setNuevo("");
+      return;
     }
-    const unicos = new Map<string, typeof salida[number]>();
-    for (const r of salida) unicos.set(`${r.bus.id}-${r.desdeId}-${r.hastaId}`, r);
-    return Array.from(unicos.values()).sort((a, b) => a.bus.nombre.localeCompare(b.bus.nombre));
+    const creado = onAñadir(nombre);
+    if (creado) {
+      setAviso("");
+      setNuevo("");
+    }
   }
-
-  const res = resultados();
 
   return (
     <div className="animate-fade-in flex flex-col gap-4">
       <h2 className="text-xl font-bold text-tinta">Lugares</h2>
       <p className="text-sm text-subtinta">
-        Escribe dónde estás y dónde quieres ir (o elige de la lista). Via te dice qué
-        buses pasan y cuánto cobran.
+        Crea los lugares por donde pasan tus buses (ej: Potrerillos Abajo, La acequia,
+        Dolega, David…). Luego podrás elegirlos al crear las rutas de cada bus.
       </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Combo
-          label="Desde (dónde estoy)"
-          valor={desde}
-          alCambiar={setDesde}
-          opciones={nombresLugares}
-          placeholder="Ej: Dolega"
-        />
-        <Combo
-          label="Hasta (a dónde voy)"
-          valor={hasta}
-          alCambiar={setHasta}
-          opciones={nombresLugares}
-          placeholder="Ej: David"
-        />
-      </div>
-
-      <div>
-        <Combo
-          label="Buscar lugar"
-          valor={q}
-          alCambiar={setQ}
-          opciones={nombresLugares}
-          placeholder="Filtrar lista de lugares…"
-          alElegir={(v) => setDesde(v)}
-        />
-      </div>
-
-      {lugaresFiltrados.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-semibold text-subtinta">
-            Lugares guardados ({lugaresFiltrados.length})
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {lugaresFiltrados.map((grupo, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setDesde(grupo[0].nombre);
-                }}
-                className="rounded-full border-2 border-borde bg-card px-3 py-1.5 text-sm font-medium text-tinta active:scale-95"
-              >
-                {grupo[0].nombre}
-                <span className="ml-1 text-[10px] text-subtinta">
-                  ({grupo.length})
-                </span>
-              </button>
-            ))}
-          </div>
+      <Tarjeta>
+        <div className="flex gap-2">
+          <input
+            value={nuevo}
+            onChange={(e) => setNuevo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") añadir();
+            }}
+            placeholder="Nombre del lugar…"
+            className="min-w-0 flex-1 rounded-2xl border-2 border-borde bg-soft px-4 py-3 text-tinta outline-none placeholder:text-subtinta/60 focus:border-acc"
+          />
+          <button
+            onClick={añadir}
+            className="shrink-0 rounded-2xl bg-acc px-4 py-3 font-bold text-onacc active:scale-95"
+          >
+            + Añadir
+          </button>
         </div>
+        {aviso && <p className="mt-2 text-xs font-semibold text-amber-600">{aviso}</p>}
+      </Tarjeta>
+
+      {lugares.length > 3 && (
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar lugar escribiendo…"
+          className="w-full rounded-2xl border-2 border-borde bg-card px-4 py-3 text-tinta outline-none placeholder:text-subtinta/60 focus:border-acc"
+        />
       )}
 
-      {res.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-tinta">Buses encontrados</p>
-          {res.map((r, i) => (
-            <Tarjeta key={i}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-tinta">{r.bus.nombre}</p>
-                  <p className="text-sm text-subtinta">
-                    {buscarParada(r.bus, r.desdeId)?.nombre} →{" "}
-                    {buscarParada(r.bus, r.hastaId)?.nombre}
-                  </p>
-                  <p className="mt-1 text-xs text-subtinta">
-                    Salidas:{" "}
-                    {r.bus.salidasIda
-                      .map((h) => `${h}`)
-                      .concat(r.bus.salidasVuelta.map((h) => `${h}`))
-                      .slice(0, 6)
-                      .join(" · ")}
-                    {r.bus.salidasIda.length + r.bus.salidasVuelta.length > 6
-                      ? "…"
-                      : ""}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-extrabold text-acc">
-                    {r.precio !== null ? `$${r.precio.toFixed(2)}` : "—"}
-                  </p>
-                  <p className="text-[10px] text-subtinta">
-                    {r.precio === null ? "sin tarifa" : "por persona"}
-                  </p>
-                </div>
-              </div>
-            </Tarjeta>
-          ))}
-        </div>
-      )}
-
-      {desde && hasta && res.length === 0 && (
+      {lugares.length === 0 ? (
         <Tarjeta>
           <p className="text-center text-sm text-subtinta">
-            No hay buses que conecten {desde} y {hasta} con los datos guardados.
+            Aún no hay lugares. Escribe el primero arriba, por ejemplo{" "}
+            <b className="text-tinta">Potrerillos Abajo</b>.
           </p>
         </Tarjeta>
+      ) : filtrados.length === 0 ? (
+        <Tarjeta>
+          <p className="text-center text-sm text-subtinta">
+            Ningún lugar coincide con "{q}".
+          </p>
+        </Tarjeta>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filtrados.map((l) => {
+            const enUso = uso.get(l.id) || 0;
+            if (editandoId === l.id) {
+              return (
+                <Tarjeta key={l.id}>
+                  <div className="flex gap-2">
+                    <input
+                      value={textoEdit}
+                      onChange={(e) => setTextoEdit(e.target.value)}
+                      autoFocus
+                      className="min-w-0 flex-1 rounded-2xl border-2 border-borde bg-soft px-3 py-2.5 text-tinta outline-none focus:border-acc"
+                    />
+                    <button
+                      onClick={() => {
+                        if (textoEdit.trim()) onRenombrar(l.id, textoEdit.trim());
+                        setEditandoId(null);
+                      }}
+                      className="shrink-0 rounded-2xl bg-acc px-4 py-2.5 font-bold text-onacc active:scale-95"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setEditandoId(null)}
+                      className="shrink-0 rounded-2xl border-2 border-borde bg-soft px-3 py-2.5 font-bold text-subtinta active:scale-95"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </Tarjeta>
+              );
+            }
+            return (
+              <div
+                key={l.id}
+                className="flex items-center gap-2 rounded-3xl border-2 border-borde bg-card px-4 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-tinta">{l.nombre}</p>
+                  <p className="text-xs text-subtinta">
+                    {enUso === 0
+                      ? "Sin buses todavía"
+                      : `En ${enUso} bus${enUso === 1 ? "" : "es"}`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditandoId(l.id);
+                    setTextoEdit(l.nombre);
+                  }}
+                  aria-label={`Renombrar ${l.nombre}`}
+                  className="h-10 w-10 shrink-0 rounded-xl border-2 border-borde bg-soft text-subtinta active:scale-95"
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={() => setBorrar(l)}
+                  aria-label={`Eliminar ${l.nombre}`}
+                  className="h-10 w-10 shrink-0 rounded-xl border-2 border-borde bg-soft text-red-500 active:scale-95"
+                >
+                  🗑
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {borrar && (
+        <ConfirmarDialog
+          titulo={`Eliminar "${borrar.nombre}"`}
+          mensaje={
+            <>
+              Se quitará de las rutas de tus buses y de tus gastos. Esta acción no se
+              puede deshacer.
+            </>
+          }
+          confirmar={() => {
+            onEliminar(borrar.id);
+            setBorrar(null);
+          }}
+          cancelar={() => setBorrar(null)}
+          peligro
+          textoConfirmar="Eliminar"
+        />
       )}
     </div>
   );

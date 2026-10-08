@@ -4,17 +4,15 @@ import { App as AppPlugin } from "@capacitor/app";
 import { useDatos } from "./hooks/useDatos";
 import Splash from "./components/Splash";
 import Inicio from "./components/Inicio";
-import GestionarBuses from "./components/GestionarBuses";
-import BusesHoy from "./components/BusesHoy";
 import Lugares from "./components/Lugares";
+import GestionarBuses from "./components/GestionarBuses";
+import Viajar from "./components/Viajar";
+import Gastos from "./components/Gastos";
 import Configuracion from "./components/Configuracion";
-import Mapa from "./components/Mapa";
 import { Emoji } from "./components/ui";
-import { cancelarRecordatorios } from "./lib/notificaciones";
-import { lugaresDeBuses } from "./lib/busquedas";
 import { aplicarPaleta } from "./lib/colores";
 
-type Seccion = "inicio" | "buses" | "hoy" | "lugares" | "mapa" | "config";
+type Seccion = "inicio" | "lugares" | "buses" | "viaje" | "gastos" | "config";
 
 export default function App() {
   const [cargando, setCargando] = useState(true);
@@ -48,20 +46,14 @@ export default function App() {
     };
   }, []);
 
-  async function eliminarSeleccionConRecordatorio(id: string, minutos: number[]) {
-    await cancelarRecordatorios(id, minutos);
-    d.eliminarSeleccion(id);
-  }
-
   const [avisoBack, setAvisoBack] = useState(false);
-  const lugares = lugaresDeBuses(d.datos.buses);
 
   const nav = [
     { id: "inicio" as Seccion, label: "Inicio", icono: "🏠" },
-    { id: "buses" as Seccion, label: "Buses", icono: "🚌" },
-    { id: "hoy" as Seccion, label: "Hoy", icono: "📅" },
     { id: "lugares" as Seccion, label: "Lugares", icono: "📍" },
-    { id: "mapa" as Seccion, label: "Mapa", icono: "🗺️" },
+    { id: "buses" as Seccion, label: "Buses", icono: "🚌" },
+    { id: "viaje" as Seccion, label: "Viaje", icono: "🧭" },
+    { id: "gastos" as Seccion, label: "Gastos", icono: "💵" },
     { id: "config" as Seccion, label: "Más", icono: "⚙️" },
   ];
 
@@ -71,32 +63,51 @@ export default function App() {
 
       <main className="flex-1 px-4 pb-28 pt-4">
         {seccion === "inicio" && (
-          <Inicio buses={d.datos.buses} dia={d.dia} onNavegar={(s) => setSeccion(s as Seccion)} />
+          <Inicio
+            buses={d.datos.buses}
+            lugares={d.datos.lugares}
+            gastos={d.datos.gastos}
+            onNavegar={(s) => setSeccion(s as Seccion)}
+          />
+        )}
+        {seccion === "lugares" && (
+          <Lugares
+            lugares={d.datos.lugares}
+            buses={d.datos.buses}
+            onAñadir={d.añadirLugar}
+            onRenombrar={d.renombrarLugar}
+            onEliminar={d.eliminarLugar}
+          />
         )}
         {seccion === "buses" && (
           <GestionarBuses
             buses={d.datos.buses}
-            lugares={lugares}
-            onGuardar={d.guardarBus}
-            onEliminar={d.eliminarBus}
+            lugares={d.datos.lugares}
+            formatoHora={d.config.formatoHora}
+            onGuardarBus={d.guardarBus}
+            onEliminarBus={d.eliminarBus}
             onToggleFavorito={d.toggleFavorito}
+            onAsegurarLugar={d.asegurarLugar}
+            onGuardarHorarios={d.guardarHorarios}
           />
         )}
-        {seccion === "hoy" && (
-          <BusesHoy
+        {seccion === "viaje" && (
+          <Viajar
             buses={d.datos.buses}
-            dia={d.dia}
-            config={d.config}
-            onAñadir={d.añadirSeleccion}
-            onEliminar={(id) => {
-              const s = d.dia.find((x) => x.id === id);
-              if (s) void eliminarSeleccionConRecordatorio(id, [s.recordatorioMin]);
-              else d.eliminarSeleccion(id);
-            }}
+            lugares={d.datos.lugares}
+            gastos={d.datos.gastos}
+            formatoHora={d.config.formatoHora}
           />
         )}
-        {seccion === "lugares" && <Lugares buses={d.datos.buses} />}
-        {seccion === "mapa" && <Mapa />}
+        {seccion === "gastos" && (
+          <Gastos
+            buses={d.datos.buses}
+            lugares={d.datos.lugares}
+            gastos={d.datos.gastos}
+            onRegistrar={d.registrarGasto}
+            onEliminar={d.eliminarGasto}
+          />
+        )}
         {seccion === "config" && (
           <Configuracion
             config={d.config}
@@ -104,7 +115,6 @@ export default function App() {
             onConfig={d.actualizarConfig}
             onTema={d.cambiarTema}
             onLimpiar={d.limpiarTodo}
-            onAbrirMapa={() => setSeccion("mapa")}
           />
         )}
       </main>

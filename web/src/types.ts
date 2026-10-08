@@ -1,50 +1,60 @@
-export interface Parada {
+export type Sentido = "ida" | "vuelta";
+
+export type FormatoHora = "12" | "24";
+
+export interface Lugar {
   id: string;
   nombre: string;
-  minutos: number;
-  desfase: number;
 }
 
-export interface Tarifa {
+/** Hora a la que el bus pasa por un lugar de la ruta. Vacío = sin hora aún. */
+export interface Llegada {
+  lugarId: string;
+  hora: string;
+}
+
+/** Una salida del bus (un horario) con la hora de paso por cada nodo de la ruta. */
+export interface Salida {
   id: string;
-  desdeId: string;
-  hastaId: string;
-  precio: number;
+  llegadas: Llegada[];
+}
+
+export interface Horarios {
+  ida: Salida[];
+  vuelta: Salida[];
 }
 
 export interface Bus {
   id: string;
-  nombre: string;
-  lugarPrincipal: string;
-  paradas: Parada[];
-  salidasIda: string[];
-  salidasVuelta: string[];
-  tarifas: Tarifa[];
+  origen: string;
+  destino: string;
+  ida: string[];
+  vuelta: string[];
+  horarios: Horarios;
   favorito: boolean;
-  dias: number[];
 }
 
-export interface SeleccionDia {
+export interface Gasto {
   id: string;
   busId: string;
+  desdeId: string;
+  hastaId: string;
+  monto: number;
   fecha: string;
-  paradaSubidaId: string;
-  paradaBajadaId: string;
-  direccion: "ida" | "vuelta";
-  hora: string;
-  recordatorioMin: number;
 }
 
 export interface Config {
-  recordatorioMin: number;
   color: string;
   emojis: "color" | "mono" | "ninguno";
+  formatoHora: FormatoHora;
 }
 
 export type Tema = "light" | "dark";
 
 export interface Datos {
+  lugares: Lugar[];
   buses: Bus[];
+  gastos: Gasto[];
 }
 
 export const uuid = (): string =>
@@ -52,28 +62,21 @@ export const uuid = (): string =>
     ? crypto.randomUUID()
     : "id-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
 
-export const DIAS_SEMANA: { n: number; corto: string; nombre: string }[] = [
-  { n: 1, corto: "L", nombre: "Lunes" },
-  { n: 2, corto: "M", nombre: "Martes" },
-  { n: 3, corto: "X", nombre: "Miércoles" },
-  { n: 4, corto: "J", nombre: "Jueves" },
-  { n: 5, corto: "V", nombre: "Viernes" },
-  { n: 6, corto: "S", nombre: "Sábado" },
-  { n: 0, corto: "D", nombre: "Domingo" },
-];
+export const nombreBus = (b: Bus): string => `${b.origen} - ${b.destino}`;
 
-export const TODOS_LOS_DIAS = DIAS_SEMANA.map((d) => d.n);
-
-export const crearBus = (): Bus => ({
+export const crearLugar = (nombre: string): Lugar => ({
   id: uuid(),
-  nombre: "",
-  lugarPrincipal: "",
-  paradas: [],
-  salidasIda: [],
-  salidasVuelta: [],
-  tarifas: [],
+  nombre: nombre.trim(),
+});
+
+export const crearBus = (origen: string, destino: string): Bus => ({
+  id: uuid(),
+  origen: origen.trim(),
+  destino: destino.trim(),
+  ida: [],
+  vuelta: [],
+  horarios: { ida: [], vuelta: [] },
   favorito: false,
-  dias: [...TODOS_LOS_DIAS],
 });
 
 export const COLOR_PRESETS: {

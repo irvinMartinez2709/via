@@ -1,25 +1,23 @@
 import { useCallback, useState } from "react";
-import type { Bus, Config, Datos, SeleccionDia, Tema } from "../types";
+import type { Bus, Config, Datos, Gasto, Lugar, Salida, Sentido, Tema } from "../types";
+import { crearLugar, uuid } from "../types";
 import {
+  borrarTodo,
   guardarConfig,
   guardarDatos,
-  guardarDia,
   guardarTema,
   leerConfig,
   leerDatos,
-  leerDia,
   leerTema,
-  borrarTodo,
 } from "../lib/almacen";
-import { cancelarTodos } from "../lib/notificaciones";
+import { normalizar } from "../lib/busquedas";
 
 export function useDatos() {
   const [datos, setDatos] = useState<Datos>(() => leerDatos());
-  const [dia, setDia] = useState<SeleccionDia[]>(() => leerDia());
   const [config, setConfig] = useState<Config>(() => leerConfig());
   const [tema, setTema] = useState<Tema>(() => leerTema());
 
-  const actualizarDatos = useCallback((fn: (d: Datos) => Datos) => {
+  const actualizar = useCallback((fn: (d: Datos) => Datos) => {
     setDatos((prev) => {
       const nuevo = fn(prev);
       guardarDatos(nuevo);
@@ -27,68 +25,151 @@ export function useDatos() {
     });
   }, []);
 
+  const añadirLugar = useCallback(
+    (nombre: string): Lugar | null => {
+      const limpio = nombre.trim();
+      if (!limpio) return null;
+      let creado: Lugar | null = null;
+      actualizar((d) => {
+        const existe = d.lugares.find((l) => normalizar(l.nombre) === normalizar(limpio));
+        if (existe) {
+          creado = existe;
+          return d;
+        }
+        creado = crearLugar(limpio);
+        return { ...d, lugares: [...d.lugares, creado] };
+      });
+      return creado;
+    },
+    [actualizar]
+  );
+
+  /** Devuelve el lugar con ese nombre (lo crea si no existe). */
+  const asegurarLugar = useCallback(
+    (nombre: string): Lugar | null => {
+      const limpio = nombre.trim();
+      if (!limpio) return null;
+      const yaExiste = datos.lugares.find(
+        (l) => normalizar(l.nombre) === normalizar(limpio)
+      );
+      if (yaExiste) return yaExiste;
+      return añadirLugar(limpio);
+    },
+    [datos.lugares, añadirLugar]
+  );
+
+  const renombrarLugar = useCallback(
+    (id: string, nombre: string) => {
+      const limpio = nombre.trim();
+      if (!limpio) return;
+      actualizar((d) => ({
+        ...d,
+        lugares: d.lugares.map((l) => (l.id === id ? { ...l, nombre: limpio } : l)),
+        buses: d.buses.map((b) => ({
+          ...b,
+          origen: b.origen && d.lugares.find((l) => l.id === id && l.nombre === b.origen) ? limpio : b.origen,
+          destino: b.destino && d.lugares.find((l) => l.id === id && l.nombre === b.destino) ? limpio : b.destino,
+        })),
+      }));
+    },
+    [actualizar]
+  );
+
+  const eliminarLugar = useCallback(
+    (id: string) => {
+      actualizar((d) => ({
+        lugares: d.lugares.filter((l) => l.id !== id),
+        buses: d.buses.map((b) => ({
+          ...b,
+          ida: b.ida.filter((x) => x !== id),
+          vuelta: b.vuelta.filter((x) => x !== id),
+        })),
+        gastos: d.gastos.filter((g) => g.desdeId !== id && g.hastaId !== id),
+      }));
+    },
+    [actualizar]
+  );
+
   const guardarBus = useCallback(
     (bus: Bus) => {
-      actualizarDatos((d) => {
+      actualizar((d) => {
         const existe = d.buses.some((b) => b.id === bus.id);
         return {
+          ...d,
           buses: existe
             ? d.buses.map((b) => (b.id === bus.id ? bus : b))
             : [...d.buses, bus],
         };
       });
     },
-    [actualizarDatos]
+    [actualizar]
+  );
+
+  const guardarRutas = useCallback(
+    (busId: string, sentido: Sentido, ruta: string[]) => {
+      actualizar((d) => ({
+        ...d,
+        buses: d.buses.map((b) =>
+          b.id === busId ? { ...b, [sentido]: ruta } : b
+        ),
+      }));
+    },
+    [actualizar]
+  );
+
+  const guardarHorarios = useCallback(
+    (busId: string, sentido: Sentido, salidas: Salida[]) => {
+      actualizar((d) => ({
+        ...d,
+        buses: d.buses.map((b) =>
+          b.id === busId
+            ? { ...b, horarios: { ...b.horarios, [sentido]: salidas } }
+            : b
+        ),
+      }));
+    },
+    [actualizar]
   );
 
   const eliminarBus = useCallback(
     (id: string) => {
-      actualizarDatos((d) => ({ buses: d.buses.filter((b) => b.id !== id) }));
-      setDia((prev) => {
-        const nuevo = prev.filter((s) => s.busId !== id);
-        guardarDia(nuevo);
-        return nuevo;
-      });
+      actualizar((d) => ({
+        ...d,
+        buses: d.buses.filter((b) => b.id !== id),
+        gastos: d.gastos.filter((g) => g.busId !== id),
+      }));
     },
-    [actualizarDatos]
+    [actualizar]
   );
 
   const toggleFavorito = useCallback(
     (id: string) => {
-      actualizarDatos((d) => ({
+      actualizar((d) => ({
+        ...d,
         buses: d.buses.map((b) => (b.id === id ? { ...b, favorito: !b.favorito } : b)),
       }));
     },
-    [actualizarDatos]
+    [actualizar]
   );
 
-  const actualizarDia = useCallback((fn: (d: SeleccionDia[]) => SeleccionDia[]) => {
-    setDia((prev) => {
-      const nuevo = fn(prev);
-      guardarDia(nuevo);
-      return nuevo;
-    });
-  }, []);
-
-  const añadirSeleccion = useCallback(
-    (s: SeleccionDia) => {
-      actualizarDia((prev) => [...prev, s]);
+  const registrarGasto = useCallback(
+    (g: Omit<Gasto, "id" | "fecha">) => {
+      actualizar((d) => ({
+        ...d,
+        gastos: [
+          ...d.gastos,
+          { ...g, id: uuid(), fecha: new Date().toISOString() },
+        ],
+      }));
     },
-    [actualizarDia]
+    [actualizar]
   );
 
-  const eliminarSeleccion = useCallback(
+  const eliminarGasto = useCallback(
     (id: string) => {
-      actualizarDia((prev) => prev.filter((s) => s.id !== id));
+      actualizar((d) => ({ ...d, gastos: d.gastos.filter((g) => g.id !== id) }));
     },
-    [actualizarDia]
-  );
-
-  const actualizarSeleccion = useCallback(
-    (s: SeleccionDia) => {
-      actualizarDia((prev) => prev.map((x) => (x.id === s.id ? s : x)));
-    },
-    [actualizarDia]
+    [actualizar]
   );
 
   const actualizarConfig = useCallback((c: Config) => {
@@ -101,26 +182,28 @@ export function useDatos() {
     guardarTema(t);
   }, []);
 
-  const limpiarTodo = useCallback(async () => {
+  const limpiarTodo = useCallback(() => {
     borrarTodo();
-    await cancelarTodos();
-    setDatos({ buses: [] });
-    setDia([]);
+    setDatos({ lugares: [], buses: [], gastos: [] });
     setConfig(leerConfig());
     setTema(leerTema());
   }, []);
 
   return {
     datos,
-    dia,
     config,
     tema,
+    añadirLugar,
+    asegurarLugar,
+    renombrarLugar,
+    eliminarLugar,
     guardarBus,
+    guardarRutas,
+    guardarHorarios,
     eliminarBus,
     toggleFavorito,
-    añadirSeleccion,
-    eliminarSeleccion,
-    actualizarSeleccion,
+    registrarGasto,
+    eliminarGasto,
     actualizarConfig,
     cambiarTema,
     limpiarTodo,

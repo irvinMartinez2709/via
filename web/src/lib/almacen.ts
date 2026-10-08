@@ -1,40 +1,39 @@
-import type { Bus, Config, Datos, Parada, SeleccionDia, Tema } from "../types";
-import { TODOS_LOS_DIAS } from "../types";
+import type { Config, Datos, Tema } from "../types";
 
-const CLAVE_DATOS = "via.datos.v1";
-const CLAVE_DIA = "via.dia.v1";
+const CLAVE_DATOS = "via.datos.v2";
 const CLAVE_CONFIG = "via.config.v1";
 const CLAVE_TEMA = "via.tema.v1";
 
-const CONFIG_DEFECTO: Config = { recordatorioMin: 30, color: "azul", emojis: "color" };
+const CONFIG_DEFECTO: Config = { color: "azul", emojis: "color", formatoHora: "12" };
 
-function migrarParada(p: Parada): Parada {
-  return { id: p.id, nombre: p.nombre, minutos: p.minutos, desfase: p.desfase ?? 0 };
-}
-
-function migrarBus(b: Bus): Bus {
-  return {
-    ...b,
-    paradas: (b.paradas || []).map(migrarParada),
-    tarifas: b.tarifas || [],
-    salidasIda: b.salidasIda || [],
-    salidasVuelta: b.salidasVuelta || [],
-    favorito: !!b.favorito,
-    dias:
-      Array.isArray(b.dias) && b.dias.length > 0
-        ? b.dias.filter((d) => d >= 0 && d <= 6)
-        : [...TODOS_LOS_DIAS],
-  };
-}
+const DATOS_VACIOS: Datos = { lugares: [], buses: [], gastos: [] };
 
 export function leerDatos(): Datos {
   try {
     const raw = localStorage.getItem(CLAVE_DATOS);
-    if (!raw) return { buses: [] };
-    const d = JSON.parse(raw) as Datos;
-    return { buses: Array.isArray(d.buses) ? d.buses.map(migrarBus) : [] };
+    if (!raw) return { ...DATOS_VACIOS };
+    const d = JSON.parse(raw) as Partial<Datos>;
+    return {
+      lugares: Array.isArray(d.lugares) ? d.lugares : [],
+      buses: Array.isArray(d.buses)
+        ? d.buses.map((b) => ({
+            ...b,
+            ida: Array.isArray(b.ida) ? b.ida : [],
+            vuelta: Array.isArray(b.vuelta) ? b.vuelta : [],
+            horarios:
+              b.horarios && Array.isArray(b.horarios.ida) && Array.isArray(b.horarios.vuelta)
+                ? {
+                    ida: b.horarios.ida,
+                    vuelta: b.horarios.vuelta,
+                  }
+                : { ida: [], vuelta: [] },
+            favorito: !!b.favorito,
+          }))
+        : [],
+      gastos: Array.isArray(d.gastos) ? d.gastos : [],
+    };
   } catch {
-    return { buses: [] };
+    return { ...DATOS_VACIOS };
   }
 }
 
@@ -43,25 +42,6 @@ export function guardarDatos(d: Datos): void {
     localStorage.setItem(CLAVE_DATOS, JSON.stringify(d));
   } catch {
     /* almacenamiento no disponible */
-  }
-}
-
-export function leerDia(): SeleccionDia[] {
-  try {
-    const raw = localStorage.getItem(CLAVE_DIA);
-    if (!raw) return [];
-    const d = JSON.parse(raw);
-    return Array.isArray(d) ? (d as SeleccionDia[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function guardarDia(d: SeleccionDia[]): void {
-  try {
-    localStorage.setItem(CLAVE_DIA, JSON.stringify(d));
-  } catch {
-    /* noop */
   }
 }
 
@@ -76,6 +56,7 @@ export function leerConfig(): Config {
       color: typeof c.color === "string" && c.color ? c.color : CONFIG_DEFECTO.color,
       emojis:
         c.emojis === "mono" || c.emojis === "ninguno" ? c.emojis : CONFIG_DEFECTO.emojis,
+      formatoHora: c.formatoHora === "24" ? "24" : "12",
     };
   } catch {
     return { ...CONFIG_DEFECTO };
@@ -111,10 +92,9 @@ export function exportarTodo(): string {
   return JSON.stringify(
     {
       app: "Via",
-      version: 1,
+      version: 2,
       fecha: new Date().toISOString(),
       datos: leerDatos(),
-      dia: leerDia(),
       config: leerConfig(),
       tema: leerTema(),
     },
@@ -128,7 +108,6 @@ export function importarTodo(texto: string): boolean {
     const obj = JSON.parse(texto);
     if (!obj || typeof obj !== "object") return false;
     if (obj.datos && typeof obj.datos === "object") guardarDatos(obj.datos);
-    if (Array.isArray(obj.dia)) guardarDia(obj.dia);
     if (obj.config && typeof obj.config === "object") guardarConfig(obj.config);
     if (obj.tema === "light" || obj.tema === "dark") guardarTema(obj.tema);
     return true;
@@ -139,9 +118,8 @@ export function importarTodo(texto: string): boolean {
 
 export function borrarTodo(): void {
   localStorage.removeItem(CLAVE_DATOS);
-  localStorage.removeItem(CLAVE_DIA);
   localStorage.removeItem(CLAVE_CONFIG);
   localStorage.removeItem(CLAVE_TEMA);
 }
 
-export { CLAVE_DATOS, CLAVE_DIA, CLAVE_CONFIG, CLAVE_TEMA };
+export { CLAVE_DATOS, CLAVE_CONFIG, CLAVE_TEMA };

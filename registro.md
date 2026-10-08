@@ -57,3 +57,15 @@ Crear una app para Android para anotar autobuses que transito ("Via"): 1) nombre
 ## Sesion 8b - 2026-08-19
 - v1.3.0 instalado y VERIFICADO en Redmi: arranque Status ok, sin FATAL, sin AndroidRuntime, sin errores JS en WebView, sin ANR, PID activo. Los errores chromium del log eran de Google Play Services (Ads/Cronet), no de Via.
 
+## Sesion 9 - 2026-10-08 (reescritura completa -> v2.0.0)
+- Nueva especificacion de 7 puntos; decisiones: quitar horarios/dias/recordatorios (por ahora), empezar datos de cero (via.datos.v2), eliminar mapa offline Leaflet/MBTiles (solo iframe Google Maps si hay internet).
+- Modelo nuevo: Lugar {id,nombre}; Bus {origen,destino,ida[],vuelta[],favorito} (rutas ordenadas = jerarquia de nodos A <-> B); Gasto {busId,desdeId,hastaId,monto,fecha}. Nuevos lib/rutas.ts (segmentoEntre, buscarViajes, cadenaTexto, urlGoogleMaps sin API key) y hooks/useDatos.ts con CRUD completo.
+- Secciones: Lugares (CRUD + anti-duplicados), Buses (alta con 2 cuadros Origen-Destino + modal "Anadir rutas" con pestanas Ida/Vuelta, nodos ordenados con subir/bajar/quitar, buscador de lista), Viaje (A -> B, buses con segmento "Pasa por:", iframe Google Maps solo online), Gastos (A -> B solo si existe bus que cumpla la ruta, monto + historial), Inicio (guia 3 pasos + stats), Config (sin recordatorios/mbtiles).
+- Eliminado: BusesHoy, BusCard, BusFormulario, Mapa, lib/{mapa,idb,notificaciones,busquedaApp,busquedaBus}; deps leaflet/sql.js/@capacitor/local-notifications. version 2.0.0.
+- Verificado: lint + build OK; Playwright smoke TODO OK (8 lugares + duplicado, bus 2 cuadros, ida/vuelta con cadenas, Viaje Altamar->David con iframe maps.google.com, sin buses, gasto $1.50 persistente tras recarga, 0 errores JS).
+
+## Sesion 10 - 2026-10-08 (gastos en Viaje + horarios)
+- 1) Viaje: al seleccionar bus+sentido se muestran "Gastos registrados en este tramo" (mismo bus y mismo A->B) y "Otros gastos de este bus".
+- 2) Horarios: modelo Llegada/Salida/Horarios en Bus (ida y vuelta) con subhorario por cada nodo de la ruta; nuevo BusHorariosModal (pestanas Ida/Vuelta, input type=time por lugar, editar/eliminar salidas, aviso si falta la ruta); boton "Horarios" en la tarjeta + resumen "Ida: 1:10 p. m."; Viaje muestra "Sale a las HH:MM" y horas del tramo. Config "Formato de hora" 12h (1:10 p. m.) / 24h (13:10) intercambiable, defecto 12h; lib/horas.ts; migracion via.datos.v2 conserva datos.
+- Verificado: lint + build OK; Playwright 16/16 TODO OK (horarios 7 subhorarios, Viaje con horarios+gastos, cambio a 24h, persistencia). version 2.0.0.
+

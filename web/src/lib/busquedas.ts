@@ -6,59 +6,13 @@ export function normalizar(texto: string): string {
     .trim();
 }
 
-export function limpiarHora(h: string): string {
-  return (h || "").trim().replace(/[^0-9:]/g, "");
-}
-
-export function esHoraValida(h: string): boolean {
-  const m = limpiarHora(h).match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return false;
-  const hh = parseInt(m[1], 10);
-  const mm = parseInt(m[2], 10);
-  return hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59;
-}
-
-export function horaAMinutos(h: string): number {
-  const m = limpiarHora(h).match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return 0;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-}
-
-export function minutosAHora(min: number): string {
-  let total = ((Math.round(min) % 1440) + 1440) % 1440;
-  const hh = Math.floor(total / 60);
-  const mm = total % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-
-export function horaActualMin(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-export function horaTexto(h: string): string {
-  const m = limpiarHora(h).match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return h;
-  let hh = parseInt(m[1], 10);
-  const mm = m[2];
-  const suf = hh >= 12 ? "p. m." : "a. m.";
-  hh = hh % 12 === 0 ? 12 : hh % 12;
-  return `${hh}:${mm} ${suf}`;
-}
-
-export function ordenarHoras(horas: string[]): string[] {
-  return [...new Set(horas)]
-    .filter(esHoraValida)
-    .sort((a, b) => horaAMinutos(a) - horaAMinutos(b));
-}
-
 export function esNumeroPrecio(t: string): boolean {
   const n = parseFloat(t.replace(",", "."));
   return !isNaN(n) && n >= 0;
 }
 
 export function precioTexto(n: number): string {
-  return "$" + n.toFixed(2).replace(".", ".");
+  return "$" + n.toFixed(2);
 }
 
 export function precioParse(t: string): number {
@@ -124,20 +78,4 @@ export function coincideFuzzy(texto: string, q: string): boolean {
       (qp.length >= 3 &&
         tPartes.some((tp) => difLevenshtein(tp, qp.slice(0, qp.length - 1)) <= umbral))
   );
-}
-
-export interface LugarBus {
-  nombre: string;
-  busId: string;
-  paradaId: string;
-}
-
-export function lugaresDeBuses(
-  buses: { id: string; paradas: { id: string; nombre: string }[] }[]
-): string[] {
-  const unicos = new Set<string>();
-  for (const b of buses) {
-    for (const p of b.paradas) unicos.add(p.nombre.trim());
-  }
-  return Array.from(unicos).filter(Boolean).sort((a, b) => a.localeCompare(b));
 }

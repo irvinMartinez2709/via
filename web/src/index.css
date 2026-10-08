@@ -166,6 +166,11 @@
   ::selection {
     background-color: rgba(96, 165, 250, 0.35);
   }
+
+  /* Icono del selector de hora: visible en tema oscuro */
+  .dark input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
 }
 
 @layer components {
