@@ -34,6 +34,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # 'tools' ya no existe en los cmdline-tools 16+ y rompe sdkmanager
+          packages: platform-tools
 
       - name: Install dependencies
         working-directory: web
